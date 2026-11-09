@@ -1,0 +1,144 @@
+:root {
+  --fog: #eef1f5;
+  --paper: #ffffff;
+  --ink: #151a24;
+  --mute: #5d6676;
+  --line: #d3d8e1;
+  --buy: #0b8a5a;
+  --sell: #c8323f;
+  --signal: #3b44f6;
+  --display: "Bricolage Grotesque", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fog: #121722; --paper: #1a2030; --ink: #e8ecf3; --mute: #93a0b4; --line: #2c3446;
+    --buy: #2fc489; --sell: #ff6b77; --signal: #7c84ff; color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fog); color: var(--ink); font: 15px/1.5 var(--body); font-variant-numeric: tabular-nums; }
+a { color: inherit; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.1; }
+h3 { font-size: 1.15rem; margin: 2.25rem 0 0.75rem; }
+p { margin: 0; }
+
+.muted { color: var(--mute); }
+.up { color: var(--buy); }
+.down { color: var(--sell); }
+.error { color: var(--sell); }
+.ok { color: var(--buy); }
+.hint { color: var(--mute); font-size: 13px; }
+.pad { padding: 24px; }
+.center { text-align: center; padding: 30vh 16px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+button { cursor: pointer; border: 0; background: none; padding: 0; }
+button:disabled { opacity: 0.55; cursor: progress; }
+.primary { background: var(--signal); color: #fff; padding: 11px 18px; border-radius: 8px; font-weight: 600; }
+.quiet { border: 1px solid var(--line); padding: 7px 12px; border-radius: 8px; }
+
+.field { display: flex; align-items: center; gap: 8px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; }
+.field:focus-within { border-color: var(--signal); }
+.field input, .field select { flex: 1; min-width: 0; border: 0; background: none; padding: 11px 0; outline: none; }
+.field span { color: var(--mute); }
+
+/* landing + signup */
+.landing { max-width: 30rem; margin: 22vh auto 0; padding: 0 16px; display: grid; gap: 16px; justify-items: start; }
+.landing h1 { font-size: clamp(3rem, 10vw, 5.5rem); letter-spacing: -0.03em; }
+.landing p { color: var(--mute); font-size: 1.05rem; }
+
+/* header */
+header { display: flex; align-items: center; gap: 24px; padding: 12px 24px; border-bottom: 1px solid var(--line); background: var(--paper); flex-wrap: wrap; }
+.brand { font: 700 1.5rem var(--display); text-decoration: none; letter-spacing: -0.02em; }
+nav { display: flex; gap: 20px; flex: 1; }
+nav a { text-decoration: none; color: var(--mute); padding: 4px 0; border-bottom: 2px solid transparent; }
+nav a[aria-current="true"] { color: var(--ink); border-color: var(--ink); }
+.deposit { font-size: 13px; color: var(--mute); }
+.deposit b { color: var(--ink); font-weight: 600; }
+
+/* markets */
+.markets { display: grid; grid-template-columns: 300px 1fr; min-height: calc(100vh - 62px); }
+.tokens { border-right: 1px solid var(--line); background: var(--paper); }
+.tokens input { width: 100%; border: 0; border-bottom: 1px solid var(--line); padding: 14px 16px; background: none; outline-offset: -2px; }
+.tokens ul { list-style: none; margin: 0; padding: 0; max-height: calc(100vh - 110px); overflow: auto; }
+.tokens li button { display: grid; grid-template-columns: 22px 1fr auto 58px; align-items: center; gap: 10px; width: 100%; padding: 10px 16px; text-align: left; }
+.tokens li button:hover { background: var(--fog); }
+.tokens li button[aria-pressed="true"] { background: var(--fog); box-shadow: inset 3px 0 var(--ink); }
+.tokens img, .dot { width: 22px; height: 22px; border-radius: 50%; background: var(--line); }
+.sym { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.px, .tokens .up, .tokens .down { text-align: right; font-size: 13px; }
+
+.token { padding: 28px 32px; display: grid; grid-template-columns: 1fr 300px; grid-template-areas: "head ticket" "tf ticket" "chart ticket"; gap: 16px 32px; align-content: start; }
+.token .head { grid-area: head; }
+.token > .tf { grid-area: tf; }
+.chart { grid-area: chart; width: 100%; height: 300px; display: grid; place-items: center; }
+.ticket { grid-area: ticket; }
+.head h2 { font-size: 1.1rem; font-weight: 500; }
+.head h2 .muted { font-family: var(--body); font-weight: 400; margin-left: 6px; }
+/* the one loud thing */
+.price { font: 700 clamp(2.75rem, 7vw, 5.25rem) / 1 var(--display); letter-spacing: -0.035em; margin: 6px 0 4px; }
+
+.chart .line { fill: none; stroke-width: 2; }
+.chart.up .line { stroke: var(--buy); }
+.chart.down .line { stroke: var(--sell); }
+.chart .area { opacity: 0.08; }
+.chart.up .area { fill: var(--buy); }
+.chart.down .area { fill: var(--sell); }
+
+.tf { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; padding: 2px; justify-self: start; background: var(--paper); }
+.tf button { padding: 5px 14px; border-radius: 6px; color: var(--mute); }
+.tf button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+
+.ticket { display: grid; gap: 12px; align-content: start; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+.ticket .tf { width: 100%; }
+.ticket .tf button { flex: 1; }
+.ticket.buy .tf button[aria-pressed="true"] { background: var(--buy); color: #fff; }
+.ticket.sell .tf button[aria-pressed="true"] { background: var(--sell); color: #fff; }
+.ticket .field input { font-size: 1.4rem; }
+.ticket.sell .primary { background: var(--sell); }
+.ticket.buy .primary { background: var(--buy); }
+
+/* profile + alerts */
+.profile { max-width: 46rem; margin: 0 auto; padding: 32px 16px 64px; }
+.profile > h2 { font-size: 2rem; margin-bottom: 4px; }
+.profile .head { display: grid; gap: 6px; justify-items: start; }
+.profile .head h2 { font-size: 1.25rem; }
+.stats { display: flex; gap: 20px; flex-wrap: wrap; color: var(--mute); align-items: start; }
+.people summary { cursor: pointer; }
+.people ul { list-style: none; padding: 6px 0 0; margin: 0; display: grid; gap: 2px; }
+
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-weight: 500; color: var(--mute); font-size: 13px; }
+th, td { padding: 9px 0; border-bottom: 1px solid var(--line); }
+th:not(:first-child), td:not(:first-child) { text-align: right; }
+
+.withdraw { margin-top: 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+.withdraw summary { padding: 12px 16px; cursor: pointer; font-weight: 600; }
+.withdraw form { display: grid; gap: 10px; padding: 0 16px 16px; }
+
+.feed { list-style: none; padding: 0; margin: 0; }
+.feed li { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.feed a { text-decoration: none; }
+.feed .kind a { font-weight: 600; }
+.feed .kind.buy::before, .feed .kind.sell::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 10px; vertical-align: 1px; }
+.feed .kind.buy::before { background: var(--buy); }
+.feed .kind.sell::before { background: var(--sell); }
+
+@media (max-width: 860px) {
+  header { gap: 12px; padding: 12px 16px; }
+  nav { order: 3; flex-basis: 100%; }
+  .markets { grid-template-columns: 1fr; }
+  .tokens { border-right: 0; border-bottom: 1px solid var(--line); }
+  .tokens ul { max-height: 240px; }
+  .token { grid-template-columns: 1fr; grid-template-areas: "head" "tf" "chart" "ticket"; padding: 20px 16px; }
+  .chart { height: 200px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+.unverified { color: var(--sell); font-weight: 400; }
+.risks { margin: 0; padding: 10px 12px 10px 28px; border-radius: 8px; background: color-mix(in srgb, var(--sell) 10%, transparent); color: var(--ink); font-size: 13px; display: grid; gap: 4px; }
