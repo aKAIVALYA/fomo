@@ -1,0 +1,149 @@
+{
+  "name": "terminal",
+  "description": "fomo terminal (v1): a gasless trading terminal for Solana and Base tokens funded from a single USDC balance, with social features to follow people and see what they buy. A Bun HTTP API and wallet indexer back a single-file React frontend built with Vite.",
+  "languages": [
+    "config",
+    "css",
+    "html",
+    "json",
+    "markdown",
+    "powershell",
+    "sql",
+    "typescript"
+  ],
+  "frameworks": [
+    "React",
+    "Vite",
+    "Bun",
+    "Privy",
+    "Solana web3.js",
+    "viem",
+    "PGlite"
+  ],
+  "files": [
+    {
+      "path": ".env.example",
+      "language": "config",
+      "sizeLines": 43,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".ua/config.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "sizeLines": 54,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "api.ts",
+      "language": "typescript",
+      "sizeLines": 510,
+      "fileCategory": "code"
+    },
+    {
+      "path": "indexer.test.ts",
+      "language": "typescript",
+      "sizeLines": 40,
+      "fileCategory": "code"
+    },
+    {
+      "path": "indexer.ts",
+      "language": "typescript",
+      "sizeLines": 114,
+      "fileCategory": "code"
+    },
+    {
+      "path": "package.json",
+      "language": "json",
+      "sizeLines": 38,
+      "fileCategory": "config"
+    },
+    {
+      "path": "schema.sql",
+      "language": "sql",
+      "sizeLines": 52,
+      "fileCategory": "data"
+    },
+    {
+      "path": "shared.test.ts",
+      "language": "typescript",
+      "sizeLines": 63,
+      "fileCategory": "code"
+    },
+    {
+      "path": "shared.ts",
+      "language": "typescript",
+      "sizeLines": 95,
+      "fileCategory": "code"
+    },
+    {
+      "path": "start.ps1",
+      "language": "powershell",
+      "sizeLines": 24,
+      "fileCategory": "script"
+    },
+    {
+      "path": "tsconfig.json",
+      "language": "json",
+      "sizeLines": 12,
+      "fileCategory": "config"
+    },
+    {
+      "path": "vite.config.ts",
+      "language": "typescript",
+      "sizeLines": 10,
+      "fileCategory": "code"
+    },
+    {
+      "path": "web/index.html",
+      "language": "html",
+      "sizeLines": 15,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "web/main.tsx",
+      "language": "typescript",
+      "sizeLines": 581,
+      "fileCategory": "code"
+    },
+    {
+      "path": "web/styles.css",
+      "language": "css",
+      "sizeLines": 151,
+      "fileCategory": "markup"
+    }
+  ],
+  "totalFiles": 16,
+  "filteredByIgnore": 0,
+  "estimatedComplexity": "small",
+  "importMap": {
+    ".env.example": [],
+    ".ua/config.json": [],
+    "README.md": [],
+    "api.ts": [
+      "indexer.ts",
+      "shared.ts"
+    ],
+    "indexer.test.ts": [],
+    "indexer.ts": [
+      "shared.ts"
+    ],
+    "package.json": [],
+    "schema.sql": [],
+    "shared.test.ts": [],
+    "shared.ts": [],
+    "start.ps1": [],
+    "tsconfig.json": [],
+    "vite.config.ts": [],
+    "web/index.html": [],
+    "web/main.tsx": [
+      "web/styles.css"
+    ],
+    "web/styles.css": []
+  }
+}

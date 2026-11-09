@@ -1,0 +1,1058 @@
+{
+  "version": "1.0.0",
+  "gitCommitHash": "a415c012cbf1fc2a3fc7fb5315cfb4e840ed2af2",
+  "generatedAt": "2026-11-09T20:07:12.668Z",
+  "files": {
+    ".env.example": {
+      "filePath": ".env.example",
+      "contentHash": "da377b426ab29d5eed6130f769cd706733662256ee516505e1b4623b67e32030",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 44,
+      "hasStructuralAnalysis": false
+    },
+    ".ua/config.json": {
+      "filePath": ".ua/config.json",
+      "contentHash": "4b66f98f8a815dfeb2d3a29eeb73418e07c40ed020a1498c07e908b2254f0c8c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2,
+      "hasStructuralAnalysis": false
+    },
+    "README.md": {
+      "filePath": "README.md",
+      "contentHash": "bd47dcf7d8382abfd8dea3fed32103e2aec307d313dcde16b9bacd47441d26e3",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 55,
+      "hasStructuralAnalysis": false
+    },
+    "api.ts": {
+      "filePath": "api.ts",
+      "contentHash": "de50e75cdf3e42a2608f774a877bb1fac74dbfa5619b20586a2e22055c7316a9",
+      "functions": [
+        {
+          "name": "bad",
+          "params": [
+            "msg",
+            "status"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "userId",
+          "params": [
+            "req"
+          ],
+          "returnType": "Promise<string>",
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "me",
+          "params": [
+            "req"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "getJson",
+          "params": [
+            "url",
+            "headers",
+            "body"
+          ],
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "jup",
+          "params": [
+            "path"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "relay",
+          "params": [
+            "path",
+            "body"
+          ],
+          "exported": false,
+          "lineCount": 2
+        },
+        {
+          "name": "gecko",
+          "params": [
+            "path"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "pubkey",
+          "params": [
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "evmAddr",
+          "params": [
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "chainOf",
+          "params": [
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "tokenAddr",
+          "params": [
+            "chain",
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "rawAmount",
+          "params": [
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "geckoToken",
+          "params": [
+            "t"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "tokenInfo",
+          "params": [
+            "chain",
+            "mints"
+          ],
+          "returnType": "Promise<Record<string, any>>",
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "tokenKey",
+          "params": [
+            "r"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "infoFor",
+          "params": [
+            "rows"
+          ],
+          "returnType": "Promise<Record<string, any>>",
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "evmTokens",
+          "params": [
+            "chain",
+            "q"
+          ],
+          "exported": false,
+          "lineCount": 19
+        },
+        {
+          "name": "evmRpc",
+          "params": [
+            "chain",
+            "method",
+            "params"
+          ],
+          "returnType": "Promise<string>",
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "cash",
+          "params": [
+            "u"
+          ],
+          "returnType": "Promise<Record<string, bigint>>",
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "total",
+          "params": [
+            "bal"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "cashJson",
+          "params": [
+            "bal"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "usdStr",
+          "params": [
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "needSol",
+          "params": [
+            "wallet"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "toTx",
+          "params": [
+            "payer",
+            "blockhash",
+            "ixs",
+            "alts"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "toIx",
+          "params": [
+            "i"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "rateLimit",
+          "params": [
+            "id"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "sponsorFee",
+          "params": [
+            "ixs"
+          ],
+          "returnType": "Promise<bigint>",
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "solTx",
+          "params": [
+            "u",
+            "blockhash",
+            "ixs",
+            "alts",
+            "fee"
+          ],
+          "exported": false,
+          "lineCount": 16
+        },
+        {
+          "name": "relaySwap",
+          "params": [
+            "u",
+            "from",
+            "to",
+            "amount",
+            "kind"
+          ],
+          "exported": false,
+          "lineCount": 30
+        },
+        {
+          "name": "h",
+          "params": [
+            "fn"
+          ],
+          "exported": false,
+          "lineCount": 13
+        }
+      ],
+      "classes": [
+        {
+          "name": "HttpError",
+          "methods": [
+            "constructor"
+          ],
+          "properties": [],
+          "exported": false,
+          "lineCount": 1
+        }
+      ],
+      "imports": [
+        {
+          "source": "jose",
+          "specifiers": [
+            "createRemoteJWKSet",
+            "jwtVerify"
+          ]
+        },
+        {
+          "source": "@solana/web3.js",
+          "specifiers": [
+            "AddressLookupTableAccount",
+            "ComputeBudgetProgram",
+            "Keypair",
+            "PublicKey",
+            "TransactionInstruction",
+            "TransactionMessage",
+            "VersionedTransaction"
+          ]
+        },
+        {
+          "source": "@solana/spl-token",
+          "specifiers": [
+            "createAssociatedTokenAccountIdempotentInstruction",
+            "createTransferCheckedInstruction",
+            "getAssociatedTokenAddressSync"
+          ]
+        },
+        {
+          "source": "viem",
+          "specifiers": [
+            "verifyMessage"
+          ]
+        },
+        {
+          "source": "./shared",
+          "specifiers": [
+            "CHAINS",
+            "USDC",
+            "cached",
+            "capPriorityFee",
+            "erc20BalanceOf",
+            "erc20Transfer",
+            "fundAtaCreates",
+            "isEvm",
+            "migrate",
+            "ownsWallet",
+            "rpc",
+            "signupMessage",
+            "sql",
+            "toDecimal"
+          ]
+        },
+        {
+          "source": "./indexer",
+          "specifiers": [
+            "runIndexer"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 511,
+      "hasStructuralAnalysis": true
+    },
+    "indexer.test.ts": {
+      "filePath": "indexer.test.ts",
+      "contentHash": "29a8beea71d4bdc7f898dc4ea45d4866c81bee682bec228dff475bd067425c5d",
+      "functions": [
+        {
+          "name": "bal",
+          "params": [
+            "mint",
+            "amount",
+            "decimals",
+            "owner"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "tx",
+          "params": [
+            "pre",
+            "post",
+            "err"
+          ],
+          "exported": false,
+          "lineCount": 1
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "bun:test",
+          "specifiers": [
+            "expect",
+            "test"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 41,
+      "hasStructuralAnalysis": true
+    },
+    "indexer.ts": {
+      "filePath": "indexer.ts",
+      "contentHash": "f7a0f7fc6e43a60e6229ba76d4658b6659d7ea72b61f17b14bab15dcd00cabe2",
+      "functions": [
+        {
+          "name": "parse",
+          "params": [
+            "tx",
+            "owner"
+          ],
+          "returnType": "Row[]",
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "addressesOf",
+          "params": [
+            "wallet"
+          ],
+          "returnType": "Promise<string[]>",
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "indexUser",
+          "params": [
+            "u"
+          ],
+          "exported": false,
+          "lineCount": 28
+        },
+        {
+          "name": "settleAction",
+          "params": [
+            "status",
+            "ageMs"
+          ],
+          "returnType": "\"trade\" | \"drop\" | \"wait\"",
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "settle",
+          "params": [],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "runIndexer",
+          "params": [],
+          "exported": true,
+          "lineCount": 12
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@solana/web3.js",
+          "specifiers": [
+            "PublicKey",
+            "ParsedTransactionWithMeta"
+          ]
+        },
+        {
+          "source": "@solana/spl-token",
+          "specifiers": [
+            "TOKEN_2022_PROGRAM_ID",
+            "TOKEN_PROGRAM_ID"
+          ]
+        },
+        {
+          "source": "./shared",
+          "specifiers": [
+            "USDC",
+            "migrate",
+            "rpc",
+            "sql",
+            "toDecimal"
+          ]
+        }
+      ],
+      "exports": [
+        "parse",
+        "settleAction",
+        "settle",
+        "runIndexer"
+      ],
+      "totalLines": 115,
+      "hasStructuralAnalysis": true
+    },
+    "package.json": {
+      "filePath": "package.json",
+      "contentHash": "4312711f2d1b06c1637dfc6c6086fa860ee001230db0cb53ef5a9b862c4ef9db",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 39,
+      "hasStructuralAnalysis": false
+    },
+    "schema.sql": {
+      "filePath": "schema.sql",
+      "contentHash": "8cfd37d7cc302b52cc57c39690fbdc770a4d45c910928ed936abccc861e2c5eb",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 53,
+      "hasStructuralAnalysis": false
+    },
+    "shared.test.ts": {
+      "filePath": "shared.test.ts",
+      "contentHash": "bbb4d9090505b5c15d3c720e6605463fc9588694a95b8703032553f6ed9594cd",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "bun:test",
+          "specifiers": [
+            "expect",
+            "test"
+          ]
+        },
+        {
+          "source": "@solana/web3.js",
+          "specifiers": [
+            "PublicKey"
+          ]
+        },
+        {
+          "source": "@solana/web3.js",
+          "specifiers": [
+            "ComputeBudgetProgram",
+            "Keypair"
+          ]
+        },
+        {
+          "source": "@solana/spl-token",
+          "specifiers": [
+            "createAssociatedTokenAccountIdempotentInstruction",
+            "createTransferCheckedInstruction"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 64,
+      "hasStructuralAnalysis": true
+    },
+    "shared.ts": {
+      "filePath": "shared.ts",
+      "contentHash": "e93965bf26878f447d95b285b09d289f8c4a9d0394a08bd8d153f2cabf9ff7e3",
+      "functions": [
+        {
+          "name": "migrate",
+          "params": [],
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "isEvm",
+          "params": [
+            "chain"
+          ],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "fundAtaCreates",
+          "params": [
+            "ixs",
+            "sponsor"
+          ],
+          "returnType": "PublicKey[]",
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "capPriorityFee",
+          "params": [
+            "ixs",
+            "maxMicroLamports"
+          ],
+          "returnType": "TransactionInstruction[]",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "word",
+          "params": [
+            "hex"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "erc20Transfer",
+          "params": [
+            "to",
+            "raw"
+          ],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "erc20BalanceOf",
+          "params": [
+            "owner"
+          ],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "toDecimal",
+          "params": [
+            "raw",
+            "decimals"
+          ],
+          "returnType": "string",
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "signupMessage",
+          "params": [
+            "id"
+          ],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "ownsWallet",
+          "params": [
+            "wallet",
+            "id",
+            "signatureB64"
+          ],
+          "returnType": "Promise<boolean>",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "cached",
+          "params": [
+            "key",
+            "ttlMs",
+            "fn"
+          ],
+          "returnType": "Promise<T>",
+          "exported": true,
+          "lineCount": 12
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "bun",
+          "specifiers": [
+            "SQL"
+          ]
+        },
+        {
+          "source": "@solana/web3.js",
+          "specifiers": [
+            "ComputeBudgetProgram",
+            "Connection",
+            "PublicKey",
+            "TransactionInstruction"
+          ]
+        },
+        {
+          "source": "@solana/spl-token",
+          "specifiers": [
+            "ASSOCIATED_TOKEN_PROGRAM_ID"
+          ]
+        }
+      ],
+      "exports": [
+        "sql",
+        "migrate",
+        "USDC",
+        "rpc",
+        "CHAINS",
+        "isEvm",
+        "fundAtaCreates",
+        "capPriorityFee",
+        "erc20Transfer",
+        "erc20BalanceOf",
+        "toDecimal",
+        "signupMessage",
+        "ownsWallet",
+        "cached"
+      ],
+      "totalLines": 96,
+      "hasStructuralAnalysis": true
+    },
+    "start.ps1": {
+      "filePath": "start.ps1",
+      "contentHash": "3ab6bcccad908950a80196441619521bf071fa0ac387eb33ae45edf14367640e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 25,
+      "hasStructuralAnalysis": false
+    },
+    "tsconfig.json": {
+      "filePath": "tsconfig.json",
+      "contentHash": "4d119b367d1698e105334e682da83a495ee45ce0697368603bbd048d0edb9436",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 13,
+      "hasStructuralAnalysis": false
+    },
+    "vite.config.ts": {
+      "filePath": "vite.config.ts",
+      "contentHash": "b4fdf2d8b090c76c3041936a853a6af69621be3e85e5c207b1ef2e20e9604b80",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vite",
+          "specifiers": [
+            "defineConfig",
+            "loadEnv"
+          ]
+        },
+        {
+          "source": "@vitejs/plugin-react",
+          "specifiers": [
+            "react"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 11,
+      "hasStructuralAnalysis": true
+    },
+    "web/index.html": {
+      "filePath": "web/index.html",
+      "contentHash": "5fc32135e075ec93f0ea4bdfc377f241d85900387dab1b545e9b79806ed87564",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 16,
+      "hasStructuralAnalysis": false
+    },
+    "web/main.tsx": {
+      "filePath": "web/main.tsx",
+      "contentHash": "9a84431c8ac23ab4222e1c6ef6a1b3e5a18ac61a4a09efdb193a476c5c448e79",
+      "functions": [
+        {
+          "name": "getToken",
+          "params": [],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "api",
+          "params": [
+            "path",
+            "init"
+          ],
+          "returnType": "Promise<T>",
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "toRaw",
+          "params": [
+            "s",
+            "dec"
+          ],
+          "returnType": "string | null",
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "num",
+          "params": [
+            "n",
+            "d"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "usd",
+          "params": [
+            "n"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "short",
+          "params": [
+            "a"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "ago",
+          "params": [
+            "ts"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "useHash",
+          "params": [],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "usePoll",
+          "params": [
+            "path",
+            "ms"
+          ],
+          "returnType": "[T | undefined, () => void, string]",
+          "exported": false,
+          "lineCount": 14
+        },
+        {
+          "name": "getConfig",
+          "params": [],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "useSend",
+          "params": [
+            "me"
+          ],
+          "exported": false,
+          "lineCount": 25
+        },
+        {
+          "name": "useLinkEvm",
+          "params": [
+            "me",
+            "onDone"
+          ],
+          "exported": false,
+          "lineCount": 17
+        },
+        {
+          "name": "App",
+          "params": [],
+          "exported": false,
+          "lineCount": 50
+        },
+        {
+          "name": "Signup",
+          "params": [
+            "{ onDone }"
+          ],
+          "exported": false,
+          "lineCount": 47
+        },
+        {
+          "name": "Deposit",
+          "params": [
+            "{ me }"
+          ],
+          "exported": false,
+          "lineCount": 23
+        },
+        {
+          "name": "risks",
+          "params": [
+            "t"
+          ],
+          "returnType": "string[]",
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "Markets",
+          "params": [
+            "{ me }"
+          ],
+          "exported": false,
+          "lineCount": 41
+        },
+        {
+          "name": "TokenView",
+          "params": [
+            "{ token, me }"
+          ],
+          "exported": false,
+          "lineCount": 22
+        },
+        {
+          "name": "Chart",
+          "params": [
+            "{ candles }"
+          ],
+          "exported": false,
+          "lineCount": 15
+        },
+        {
+          "name": "Ticket",
+          "params": [
+            "{ token, me }"
+          ],
+          "exported": false,
+          "lineCount": 48
+        },
+        {
+          "name": "Profile",
+          "params": [
+            "{ username, me }"
+          ],
+          "exported": false,
+          "lineCount": 52
+        },
+        {
+          "name": "People",
+          "params": [
+            "{ label, names }"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "Withdraw",
+          "params": [
+            "{ me, p, onDone }"
+          ],
+          "exported": false,
+          "lineCount": 47
+        },
+        {
+          "name": "TradeList",
+          "params": [
+            "{ trades, empty }"
+          ],
+          "exported": false,
+          "lineCount": 18
+        },
+        {
+          "name": "Alerts",
+          "params": [],
+          "exported": false,
+          "lineCount": 11
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "StrictMode",
+            "useEffect",
+            "useRef",
+            "useState"
+          ]
+        },
+        {
+          "source": "react-dom/client",
+          "specifiers": [
+            "createRoot"
+          ]
+        },
+        {
+          "source": "@privy-io/react-auth",
+          "specifiers": [
+            "PrivyProvider",
+            "usePrivy",
+            "useCreateEvmWallet",
+            "useSendTransaction",
+            "useEvmSignMessage"
+          ]
+        },
+        {
+          "source": "@privy-io/react-auth/solana",
+          "specifiers": [
+            "useCreateWallet",
+            "useSignAndSendTransaction",
+            "useSignMessage",
+            "useWallets"
+          ]
+        },
+        {
+          "source": "viem",
+          "specifiers": [
+            "createPublicClient",
+            "http"
+          ]
+        },
+        {
+          "source": "viem/chains",
+          "specifiers": [
+            "base"
+          ]
+        },
+        {
+          "source": "@solana/kit",
+          "specifiers": [
+            "createSolanaRpc",
+            "createSolanaRpcSubscriptions",
+            "getBase58Decoder"
+          ]
+        },
+        {
+          "source": "buffer",
+          "specifiers": [
+            "Buffer"
+          ]
+        },
+        {
+          "source": "./styles.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 582,
+      "hasStructuralAnalysis": true
+    },
+    "web/styles.css": {
+      "filePath": "web/styles.css",
+      "contentHash": "dad828c19322cc705d94c1af49a8a0b2105dbea8e8504daf02285d30ce6bff0a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 152,
+      "hasStructuralAnalysis": false
+    }
+  }
+}

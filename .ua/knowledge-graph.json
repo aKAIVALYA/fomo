@@ -1,0 +1,2143 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "terminal",
+    "languages": [
+      "config",
+      "css",
+      "html",
+      "json",
+      "markdown",
+      "powershell",
+      "sql",
+      "typescript"
+    ],
+    "frameworks": [
+      "React",
+      "Vite",
+      "Bun",
+      "Privy",
+      "Solana web3.js",
+      "viem",
+      "PGlite"
+    ],
+    "description": "fomo terminal (v1): a gasless trading terminal for Solana and Base tokens funded from a single USDC balance, with social features to follow people and see what they buy. A Bun HTTP API and wallet indexer back a single-file React frontend built with Vite.",
+    "analyzedAt": "2026-11-09T20:07:12.391Z",
+    "gitCommitHash": "a415c012cbf1fc2a3fc7fb5315cfb4e840ed2af2"
+  },
+  "nodes": [
+    {
+      "id": "file:api.ts",
+      "type": "file",
+      "name": "api.ts",
+      "filePath": "api.ts",
+      "summary": "Bun HTTP API server and process entry point: runs migrations, starts the in-process indexer, verifies Privy JWTs, and serves /api routes for signup, unified USDC balance, token lists, candles, swaps (Jupiter on Solana, Relay for EVM and cross-chain), withdrawals, profiles, follows and alerts, plus the built frontend. Builds sponsor-signed gasless Solana transactions with rate limiting and USDC rent repayment.",
+      "tags": [
+        "entry-point",
+        "api-handler",
+        "http-server",
+        "gasless-trading",
+        "solana"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses Bun.serve's declarative `routes` map with a wrapper `h` that converts thrown HttpError values into JSON error responses; top-level await runs migrations before the server starts."
+    },
+    {
+      "id": "function:api.ts:userId",
+      "type": "function",
+      "name": "userId",
+      "filePath": "api.ts",
+      "lineRange": [
+        52,
+        59
+      ],
+      "summary": "Extracts the Bearer token from a request and verifies it as a Privy JWT against the remote JWKS, returning the user id or throwing a 401.",
+      "tags": [
+        "authentication",
+        "jwt",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:api.ts:getJson",
+      "type": "function",
+      "name": "getJson",
+      "filePath": "api.ts",
+      "lineRange": [
+        66,
+        76
+      ],
+      "summary": "Fetch wrapper for upstream JSON APIs with a 10s timeout, optional POST body, and translation of network failures, 429s and non-OK statuses into user-facing HttpErrors.",
+      "tags": [
+        "http-client",
+        "error-handling",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:api.ts:gecko",
+      "type": "function",
+      "name": "gecko",
+      "filePath": "api.ts",
+      "lineRange": [
+        85,
+        91
+      ],
+      "summary": "Calls the GeckoTerminal API while spacing requests about 2.2s apart to stay under its free rate limit, rejecting when the queue is too long.",
+      "tags": [
+        "rate-limiting",
+        "http-client",
+        "market-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:api.ts:tokenInfo",
+      "type": "function",
+      "name": "tokenInfo",
+      "filePath": "api.ts",
+      "lineRange": [
+        105,
+        117
+      ],
+      "summary": "Fetches cached symbol, icon, price, decimals and verification data for a set of token mints on one chain, using Jupiter for Solana and GeckoTerminal for EVM, degrading to empty data if the source is down.",
+      "tags": [
+        "market-data",
+        "caching",
+        "multi-chain"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:api.ts:infoFor",
+      "type": "function",
+      "name": "infoFor",
+      "filePath": "api.ts",
+      "lineRange": [
+        121,
+        129
+      ],
+      "summary": "Groups rows by chain and resolves token metadata for all of them in parallel, returning a map keyed by chain:mint.",
+      "tags": [
+        "market-data",
+        "multi-chain",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:api.ts:evmTokens",
+      "type": "function",
+      "name": "evmTokens",
+      "filePath": "api.ts",
+      "lineRange": [
+        132,
+        150
+      ],
+      "summary": "Returns trending or searched tokens on an EVM chain from GeckoTerminal pools, deduplicated per token and normalized to the same shape as the Solana token list.",
+      "tags": [
+        "market-data",
+        "evm",
+        "token-list"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:api.ts:cash",
+      "type": "function",
+      "name": "cash",
+      "filePath": "api.ts",
+      "lineRange": [
+        160,
+        167
+      ],
+      "summary": "Computes a user's raw USDC balance on every supported chain (Solana token accounts and ERC-20 balanceOf calls), cached for 5 seconds, forming the single unified cash balance.",
+      "tags": [
+        "balance",
+        "multi-chain",
+        "caching"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:api.ts:sponsorFee",
+      "type": "function",
+      "name": "sponsorFee",
+      "filePath": "api.ts",
+      "lineRange": [
+        202,
+        210
+      ],
+      "summary": "Calculates the USDC a user must repay for new token accounts whose rent the sponsor wallet funds, pricing SOL rent via the current SOL price.",
+      "tags": [
+        "gasless",
+        "fee-calculation",
+        "solana"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:api.ts:solTx",
+      "type": "function",
+      "name": "solTx",
+      "filePath": "api.ts",
+      "lineRange": [
+        214,
+        229
+      ],
+      "summary": "Builds the final Solana transaction for the user to sign; when a sponsor is configured it rate-limits the user, redirects ATA rent to the sponsor, caps priority fees, appends a USDC repayment transfer and pre-signs as fee payer.",
+      "tags": [
+        "gasless",
+        "transaction-builder",
+        "solana"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:api.ts:relaySwap",
+      "type": "function",
+      "name": "relaySwap",
+      "filePath": "api.ts",
+      "lineRange": [
+        234,
+        263
+      ],
+      "summary": "Quotes a Relay swap for EVM same-chain or cross-chain trades, records a pending order row for the indexer to settle, and returns either EVM transactions or a Solana transaction for the browser to sign.",
+      "tags": [
+        "swap",
+        "cross-chain",
+        "relay"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:api.ts:h",
+      "type": "function",
+      "name": "h",
+      "filePath": "api.ts",
+      "lineRange": [
+        267,
+        279
+      ],
+      "summary": "Route handler wrapper that JSON-encodes results and maps HttpError, JSON syntax errors and unique-constraint violations to appropriate HTTP error responses.",
+      "tags": [
+        "middleware",
+        "error-handling",
+        "routing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:indexer.ts",
+      "type": "file",
+      "name": "indexer.ts",
+      "filePath": "indexer.ts",
+      "summary": "Wallet indexer that polls every user's Solana addresses, converts token balance deltas into buy/sell/deposit/withdraw trade rows, and settles pending Relay orders into trades. Runs inside the API process or standalone as its own entry point.",
+      "tags": [
+        "indexer",
+        "solana",
+        "trade-history",
+        "background-worker",
+        "polling",
+        "tested"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Uses `import.meta.main` so the module works both as an importable library and as a directly executed Bun script."
+    },
+    {
+      "id": "function:indexer.ts:parse",
+      "type": "function",
+      "name": "parse",
+      "filePath": "indexer.ts",
+      "lineRange": [
+        9,
+        34
+      ],
+      "summary": "Turns one parsed Solana transaction into trade rows for an owner by diffing pre/post token balances: USDC and a token moving in opposite directions is a buy or sell, anything else a deposit or withdrawal.",
+      "tags": [
+        "transaction-parsing",
+        "trade-classification",
+        "solana"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:indexer.ts:indexUser",
+      "type": "function",
+      "name": "indexUser",
+      "filePath": "indexer.ts",
+      "lineRange": [
+        42,
+        69
+      ],
+      "summary": "Pages backward through signatures for a user's wallet and token accounts up to a stored cursor, parses each transaction oldest-first into trades, and advances the cursor.",
+      "tags": [
+        "indexer",
+        "pagination",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:indexer.ts:settleAction",
+      "type": "function",
+      "name": "settleAction",
+      "filePath": "indexer.ts",
+      "lineRange": [
+        73,
+        74
+      ],
+      "summary": "Pure decision function mapping a Relay order status and age to trade, drop or wait; only success and refund are final and non-final orders expire after an hour.",
+      "tags": [
+        "state-machine",
+        "relay",
+        "pure-function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:indexer.ts:settle",
+      "type": "function",
+      "name": "settle",
+      "filePath": "indexer.ts",
+      "lineRange": [
+        78,
+        95
+      ],
+      "summary": "Checks each pending Relay order's status and, once filled, upserts it into trades with the fill and counterpart transaction hashes, then deletes the pending row.",
+      "tags": [
+        "settlement",
+        "relay",
+        "cross-chain"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:indexer.ts:runIndexer",
+      "type": "function",
+      "name": "runIndexer",
+      "filePath": "indexer.ts",
+      "lineRange": [
+        98,
+        109
+      ],
+      "summary": "Infinite polling loop that indexes every user's wallet sequentially and settles pending Relay orders every 5 seconds, logging rather than crashing on errors.",
+      "tags": [
+        "polling",
+        "background-worker",
+        "entry-point"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:shared.ts",
+      "type": "file",
+      "name": "shared.ts",
+      "filePath": "shared.ts",
+      "summary": "Shared runtime primitives for the API and indexer: the Postgres client and schema migration, Solana RPC connection, supported chain registry, gasless transaction rewriting helpers, ERC-20 calldata encoders, exact decimal formatting, wallet signature verification and an in-memory TTL cache.",
+      "tags": [
+        "utility",
+        "database",
+        "configuration",
+        "solana",
+        "caching",
+        "tested"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:shared.ts:migrate",
+      "type": "function",
+      "name": "migrate",
+      "filePath": "shared.ts",
+      "lineRange": [
+        10,
+        22
+      ],
+      "summary": "Applies schema.sql idempotently one statement at a time, retrying up to 10 times while the database is not yet ready.",
+      "tags": [
+        "database",
+        "migration",
+        "startup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:shared.ts:isEvm",
+      "type": "function",
+      "name": "isEvm",
+      "filePath": "shared.ts",
+      "lineRange": [
+        33,
+        33
+      ],
+      "summary": "Returns whether a chain name refers to an EVM chain (anything other than Solana).",
+      "tags": [
+        "multi-chain",
+        "predicate",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:shared.ts:fundAtaCreates",
+      "type": "function",
+      "name": "fundAtaCreates",
+      "filePath": "shared.ts",
+      "lineRange": [
+        38,
+        47
+      ],
+      "summary": "Rewrites associated-token-account creation instructions so the sponsor wallet pays the rent, returning the accounts being created.",
+      "tags": [
+        "gasless",
+        "solana",
+        "transaction-rewrite"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:shared.ts:capPriorityFee",
+      "type": "function",
+      "name": "capPriorityFee",
+      "filePath": "shared.ts",
+      "lineRange": [
+        50,
+        55
+      ],
+      "summary": "Clamps any compute-unit-price instruction to a maximum so a quote cannot make the sponsor pay an unbounded priority fee.",
+      "tags": [
+        "gasless",
+        "solana",
+        "security"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:shared.ts:erc20Transfer",
+      "type": "function",
+      "name": "erc20Transfer",
+      "filePath": "shared.ts",
+      "lineRange": [
+        60,
+        60
+      ],
+      "summary": "Encodes calldata for an ERC-20 transfer(to, amount) call.",
+      "tags": [
+        "evm",
+        "encoding",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:shared.ts:erc20BalanceOf",
+      "type": "function",
+      "name": "erc20BalanceOf",
+      "filePath": "shared.ts",
+      "lineRange": [
+        61,
+        61
+      ],
+      "summary": "Encodes calldata for an ERC-20 balanceOf(owner) call.",
+      "tags": [
+        "evm",
+        "encoding",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:shared.ts:toDecimal",
+      "type": "function",
+      "name": "toDecimal",
+      "filePath": "shared.ts",
+      "lineRange": [
+        64,
+        70
+      ],
+      "summary": "Converts a raw bigint base-unit amount into an exact decimal string without floating-point rounding.",
+      "tags": [
+        "formatting",
+        "money",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:shared.ts:signupMessage",
+      "type": "function",
+      "name": "signupMessage",
+      "filePath": "shared.ts",
+      "lineRange": [
+        73,
+        73
+      ],
+      "summary": "Builds the exact sign-in message a wallet must sign to prove ownership at signup.",
+      "tags": [
+        "authentication",
+        "signup",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:shared.ts:ownsWallet",
+      "type": "function",
+      "name": "ownsWallet",
+      "filePath": "shared.ts",
+      "lineRange": [
+        74,
+        79
+      ],
+      "summary": "Verifies an Ed25519 signature of the signup message against a Solana public key using WebCrypto.",
+      "tags": [
+        "authentication",
+        "signature-verification",
+        "solana"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:shared.ts:cached",
+      "type": "function",
+      "name": "cached",
+      "filePath": "shared.ts",
+      "lineRange": [
+        84,
+        95
+      ],
+      "summary": "In-memory TTL cache that de-duplicates concurrent upstream requests and serves the last good value when a refresh fails.",
+      "tags": [
+        "caching",
+        "resilience",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:.env.example",
+      "type": "config",
+      "name": ".env.example",
+      "summary": "Template for the single root .env read by the API, indexer and Vite: Postgres and Solana RPC settings, Privy app id, Jupiter API, platform fee, gasless sponsorship (SPONSOR_KEY, EVM_GASLESS), Relay multichain keys, and browser-exposed VITE_* values.",
+      "tags": [
+        "configuration",
+        "environment-variables",
+        "secrets-template",
+        "gasless",
+        "multichain"
+      ],
+      "complexity": "simple",
+      "filePath": ".env.example"
+    },
+    {
+      "id": "document:README.md",
+      "type": "document",
+      "name": "README.md",
+      "summary": "Project overview for the fomo terminal: local/production run commands, a per-file map of the codebase, the unsigned-tx to indexer data flow, multichain routing via Jupiter and Relay over one USDC balance, and how gasless sponsorship works on Solana and Base.",
+      "tags": [
+        "documentation",
+        "entry-point",
+        "overview",
+        "architecture",
+        "setup-guide"
+      ],
+      "complexity": "moderate",
+      "filePath": "README.md"
+    },
+    {
+      "id": "config:package.json",
+      "type": "config",
+      "name": "package.json",
+      "summary": "Bun/npm manifest for the 'terminal' ESM package defining scripts for the local PGlite database, API, indexer, Vite dev/build and tests, with Solana, viem, Privy, jose and React dependencies.",
+      "tags": [
+        "configuration",
+        "build-system",
+        "dependencies",
+        "scripts"
+      ],
+      "complexity": "simple",
+      "filePath": "package.json"
+    },
+    {
+      "id": "table:schema.sql",
+      "type": "table",
+      "name": "schema.sql",
+      "summary": "Idempotent Postgres schema for the terminal: users, follows, trades, indexer cursors and pending Relay orders, plus additive multichain columns (evm_wallet, chain, via) and a per-user trade time index.",
+      "tags": [
+        "database",
+        "schema-definition",
+        "migration",
+        "postgres"
+      ],
+      "complexity": "moderate",
+      "filePath": "schema.sql",
+      "languageNotes": "Uses 'create table if not exists' and 'alter table ... add column if not exists' so the whole file can be re-run on every API start as a lightweight migration."
+    },
+    {
+      "id": "table:schema.sql:users",
+      "type": "table",
+      "name": "users",
+      "summary": "User accounts keyed by Privy DID with a unique validated username and Solana wallet; later altered to add an optional unique EVM wallet.",
+      "tags": [
+        "database",
+        "data-model",
+        "users",
+        "auth"
+      ],
+      "complexity": "simple",
+      "filePath": "schema.sql",
+      "lineRange": [
+        2,
+        7
+      ]
+    },
+    {
+      "id": "table:schema.sql:follows",
+      "type": "table",
+      "name": "follows",
+      "summary": "Social follow graph linking follower to followee users, with a composite primary key and a check preventing self-follows.",
+      "tags": [
+        "database",
+        "data-model",
+        "social-graph"
+      ],
+      "complexity": "simple",
+      "filePath": "schema.sql",
+      "lineRange": [
+        9,
+        14
+      ]
+    },
+    {
+      "id": "table:schema.sql:trades",
+      "type": "table",
+      "name": "trades",
+      "summary": "Indexer-written ledger with one row per (tx signature, token mint, user) recording buy/sell/deposit/withdraw kind, signed token and USDC deltas, chain and cross-chain 'via' tx, indexed by user and time.",
+      "tags": [
+        "database",
+        "data-model",
+        "trades",
+        "ledger"
+      ],
+      "complexity": "simple",
+      "filePath": "schema.sql",
+      "lineRange": [
+        17,
+        27
+      ]
+    },
+    {
+      "id": "table:schema.sql:cursors",
+      "type": "table",
+      "name": "cursors",
+      "summary": "Indexer progress cursor storing the last processed signature for each watched wallet or token-account address.",
+      "tags": [
+        "database",
+        "indexer",
+        "cursor-state"
+      ],
+      "complexity": "simple",
+      "filePath": "schema.sql",
+      "lineRange": [
+        30,
+        33
+      ]
+    },
+    {
+      "id": "table:schema.sql:pending",
+      "type": "table",
+      "name": "pending",
+      "summary": "Relay orders (cross-chain and EVM) awaiting settlement, holding quoted amounts until the indexer converts each into a trades row or drops it.",
+      "tags": [
+        "database",
+        "data-model",
+        "relay",
+        "settlement"
+      ],
+      "complexity": "simple",
+      "filePath": "schema.sql",
+      "lineRange": [
+        43,
+        52
+      ]
+    },
+    {
+      "id": "file:start.ps1",
+      "type": "file",
+      "name": "start.ps1",
+      "summary": "Windows PowerShell launcher that kills any running PGlite server and API, restarts the local database then the API (with a pinned Bun version), waits for ports 5434 and 3000 via a WaitPort helper, and opens the app in the browser.",
+      "tags": [
+        "script",
+        "entry-point",
+        "local-development",
+        "process-management"
+      ],
+      "complexity": "simple",
+      "filePath": "start.ps1",
+      "languageNotes": "Uses Get-CimInstance to match processes by command line and Get-NetTCPConnection to poll for listening ports."
+    },
+    {
+      "id": "config:tsconfig.json",
+      "type": "config",
+      "name": "tsconfig.json",
+      "summary": "TypeScript compiler configuration for type-checking only (noEmit) with strict mode, bundler module resolution, react-jsx, and Bun plus Vite client ambient types.",
+      "tags": [
+        "configuration",
+        "typescript",
+        "build-system"
+      ],
+      "complexity": "simple",
+      "filePath": "tsconfig.json"
+    },
+    {
+      "id": "config:.ua/config.json",
+      "type": "config",
+      "name": "config.json",
+      "summary": "Understand-Anything tool settings that set the knowledge graph output language to English.",
+      "tags": [
+        "configuration",
+        "tooling",
+        "knowledge-graph"
+      ],
+      "complexity": "simple",
+      "filePath": ".ua/config.json"
+    },
+    {
+      "id": "file:indexer.test.ts",
+      "type": "file",
+      "name": "indexer.test.ts",
+      "summary": "Bun tests for the wallet indexer: checks that parse classifies token balance deltas into buy, sell, deposit and withdraw rows (ignoring other owners and failed transactions) and that settleAction only trades on success and drops on refund or old age.",
+      "tags": [
+        "test",
+        "indexer",
+        "solana",
+        "trade-parsing"
+      ],
+      "complexity": "simple",
+      "filePath": "indexer.test.ts",
+      "lineRange": "Loads the modules under test with top-level `await import(...)` after setting SOLANA_RPC_URL, so the env default is in place before module side effects run."
+    },
+    {
+      "id": "file:shared.test.ts",
+      "type": "file",
+      "name": "shared.test.ts",
+      "summary": "Bun tests for shared helpers: Ed25519 signup wallet-ownership proof, the deduping stale-on-error cache, sponsor-funded ATA creation, priority fee capping, and ERC-20 transfer/balanceOf calldata encoding.",
+      "tags": [
+        "test",
+        "wallet-auth",
+        "caching",
+        "gasless",
+        "evm"
+      ],
+      "complexity": "moderate",
+      "filePath": "shared.test.ts"
+    },
+    {
+      "id": "file:vite.config.ts",
+      "type": "file",
+      "name": "vite.config.ts",
+      "summary": "Vite configuration that serves the React app from the web directory, reads the single root .env file, and proxies /api requests to the local Bun API port.",
+      "tags": [
+        "config",
+        "build-system",
+        "dev-server",
+        "proxy"
+      ],
+      "complexity": "simple",
+      "filePath": "vite.config.ts"
+    },
+    {
+      "id": "file:web/index.html",
+      "type": "file",
+      "name": "index.html",
+      "summary": "HTML shell for the fomo terminal frontend that loads web fonts, provides the #root mount point, and boots main.tsx as an ES module.",
+      "tags": [
+        "markup",
+        "entry-point",
+        "frontend",
+        "html-shell"
+      ],
+      "complexity": "simple",
+      "filePath": "web/index.html"
+    },
+    {
+      "id": "file:web/main.tsx",
+      "type": "file",
+      "name": "main.tsx",
+      "summary": "Single-file React frontend for the trading terminal: Privy login and embedded Solana/EVM wallets, hash routing, token markets with charts and a buy/sell ticket, profiles with holdings and follows, withdrawals, and a followed-trader alerts feed, all backed by the /api endpoints.",
+      "tags": [
+        "entry-point",
+        "component",
+        "frontend",
+        "wallet",
+        "trading-ui"
+      ],
+      "complexity": "complex",
+      "filePath": "web/main.tsx",
+      "lineRange": "The whole UI lives in one module with hash-based routing and a small usePoll hook instead of a router or data-fetching library; a module-level getToken is reassigned by App to inject the Privy access token into API calls."
+    },
+    {
+      "id": "file:web/styles.css",
+      "type": "file",
+      "name": "styles.css",
+      "summary": "Global stylesheet for the terminal UI defining light/dark color tokens and typography plus layout for the landing page, header, markets list, token chart and ticket, profile, and trade feed.",
+      "tags": [
+        "styles",
+        "theming",
+        "layout",
+        "frontend"
+      ],
+      "complexity": "moderate",
+      "filePath": "web/styles.css"
+    },
+    {
+      "id": "function:web/main.tsx:api",
+      "type": "function",
+      "name": "api",
+      "summary": "Fetch wrapper for /api routes that attaches the Privy bearer token, parses JSON, and throws the server's error message on non-OK responses.",
+      "tags": [
+        "utility",
+        "api-client",
+        "auth"
+      ],
+      "complexity": "simple",
+      "filePath": "web/main.tsx",
+      "lineRange": [
+        28,
+        37
+      ]
+    },
+    {
+      "id": "function:web/main.tsx:usePoll",
+      "type": "function",
+      "name": "usePoll",
+      "summary": "Hook that fetches an API path, optionally re-polls on an interval, and returns the data, a manual reload function, and an error string.",
+      "tags": [
+        "hook",
+        "polling",
+        "data-fetching"
+      ],
+      "complexity": "simple",
+      "filePath": "web/main.tsx",
+      "lineRange": [
+        69,
+        82
+      ]
+    },
+    {
+      "id": "function:web/main.tsx:useSend",
+      "type": "function",
+      "name": "useSend",
+      "summary": "Hook returning a function that signs and sends an API-built payload with the user's Privy wallet, either sequential EVM transactions (optionally gas-sponsored) or one Solana transaction, and returns an explorer link.",
+      "tags": [
+        "hook",
+        "wallet",
+        "transaction-signing"
+      ],
+      "complexity": "moderate",
+      "filePath": "web/main.tsx",
+      "lineRange": [
+        94,
+        118
+      ]
+    },
+    {
+      "id": "function:web/main.tsx:useLinkEvm",
+      "type": "function",
+      "name": "useLinkEvm",
+      "summary": "Hook that, once per page load, creates or finds the embedded EVM wallet, silently signs the sign-in message, and posts it to /me/evm to attach the wallet to the account.",
+      "tags": [
+        "hook",
+        "wallet",
+        "evm",
+        "auth"
+      ],
+      "complexity": "moderate",
+      "filePath": "web/main.tsx",
+      "lineRange": [
+        122,
+        138
+      ]
+    },
+    {
+      "id": "function:web/main.tsx:App",
+      "type": "function",
+      "name": "App",
+      "summary": "Root component that gates on Privy readiness and login, loads the user and cash balance, and renders the header and the hash-routed Markets, Profile, and Alerts views or the Signup flow.",
+      "tags": [
+        "component",
+        "routing",
+        "auth",
+        "layout"
+      ],
+      "complexity": "moderate",
+      "filePath": "web/main.tsx",
+      "lineRange": [
+        141,
+        190
+      ]
+    },
+    {
+      "id": "function:web/main.tsx:Signup",
+      "type": "function",
+      "name": "Signup",
+      "summary": "Signup form that picks a username, ensures a Solana embedded wallet exists, signs the ownership proof message, and registers the account with the API.",
+      "tags": [
+        "component",
+        "signup",
+        "wallet-auth",
+        "form"
+      ],
+      "complexity": "moderate",
+      "filePath": "web/main.tsx",
+      "lineRange": [
+        192,
+        238
+      ]
+    },
+    {
+      "id": "function:web/main.tsx:Deposit",
+      "type": "function",
+      "name": "Deposit",
+      "summary": "Dropdown listing the user's Solana and Base deposit addresses with click-to-copy for funding the USDC balance.",
+      "tags": [
+        "component",
+        "deposit",
+        "wallet"
+      ],
+      "complexity": "simple",
+      "filePath": "web/main.tsx",
+      "lineRange": [
+        241,
+        263
+      ]
+    },
+    {
+      "id": "function:web/main.tsx:Markets",
+      "type": "function",
+      "name": "Markets",
+      "summary": "Markets view with chain switcher and debounced token search that lists tokens with price and 24h change and shows the selected token's detail view.",
+      "tags": [
+        "component",
+        "markets",
+        "search"
+      ],
+      "complexity": "moderate",
+      "filePath": "web/main.tsx",
+      "lineRange": [
+        281,
+        321
+      ]
+    },
+    {
+      "id": "function:web/main.tsx:TokenView",
+      "type": "function",
+      "name": "TokenView",
+      "summary": "Token detail panel showing price, 24h change, a timeframe-selectable candle chart, and the trade ticket.",
+      "tags": [
+        "component",
+        "token-detail",
+        "chart"
+      ],
+      "complexity": "simple",
+      "filePath": "web/main.tsx",
+      "lineRange": [
+        323,
+        344
+      ]
+    },
+    {
+      "id": "function:web/main.tsx:Chart",
+      "type": "function",
+      "name": "Chart",
+      "summary": "Renders closing prices from candle data as an SVG line-and-area chart colored by direction, with loading and insufficient-history states.",
+      "tags": [
+        "component",
+        "chart",
+        "svg"
+      ],
+      "complexity": "simple",
+      "filePath": "web/main.tsx",
+      "lineRange": [
+        346,
+        360
+      ]
+    },
+    {
+      "id": "function:web/main.tsx:Ticket",
+      "type": "function",
+      "name": "Ticket",
+      "summary": "Buy/sell order ticket that validates the amount against balances, shows token risk notes and gasless status, requests a swap from the API, and signs and sends it.",
+      "tags": [
+        "component",
+        "trading",
+        "form",
+        "gasless"
+      ],
+      "complexity": "complex",
+      "filePath": "web/main.tsx",
+      "lineRange": [
+        362,
+        409
+      ]
+    },
+    {
+      "id": "function:web/main.tsx:Profile",
+      "type": "function",
+      "name": "Profile",
+      "summary": "Profile page showing a user's cash, holdings with PnL, followers and following, and trade history, with follow/unfollow for others and withdraw for the owner.",
+      "tags": [
+        "component",
+        "profile",
+        "portfolio",
+        "social"
+      ],
+      "complexity": "moderate",
+      "filePath": "web/main.tsx",
+      "lineRange": [
+        418,
+        469
+      ]
+    },
+    {
+      "id": "function:web/main.tsx:Withdraw",
+      "type": "function",
+      "name": "Withdraw",
+      "summary": "Withdrawal form letting the user send USDC from any funded chain or Solana tokens to an external address via an API-built transaction.",
+      "tags": [
+        "component",
+        "withdraw",
+        "form",
+        "wallet"
+      ],
+      "complexity": "moderate",
+      "filePath": "web/main.tsx",
+      "lineRange": [
+        480,
+        526
+      ]
+    },
+    {
+      "id": "function:web/main.tsx:TradeList",
+      "type": "function",
+      "name": "TradeList",
+      "summary": "Renders a feed of trades as readable buy/sell/deposit/withdraw lines with amounts, timestamps, and explorer links, or an empty-state message.",
+      "tags": [
+        "component",
+        "feed",
+        "trades"
+      ],
+      "complexity": "simple",
+      "filePath": "web/main.tsx",
+      "lineRange": [
+        528,
+        545
+      ]
+    },
+    {
+      "id": "function:web/main.tsx:Alerts",
+      "type": "function",
+      "name": "Alerts",
+      "summary": "Alerts page that polls /alerts every 10 seconds to show buys and sells from followed traders.",
+      "tags": [
+        "component",
+        "alerts",
+        "social",
+        "polling"
+      ],
+      "complexity": "simple",
+      "filePath": "web/main.tsx",
+      "lineRange": [
+        547,
+        557
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:api.ts",
+      "target": "function:api.ts:userId",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api.ts",
+      "target": "function:api.ts:getJson",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api.ts",
+      "target": "function:api.ts:gecko",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api.ts",
+      "target": "function:api.ts:tokenInfo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api.ts",
+      "target": "function:api.ts:infoFor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api.ts",
+      "target": "function:api.ts:evmTokens",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api.ts",
+      "target": "function:api.ts:cash",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api.ts",
+      "target": "function:api.ts:sponsorFee",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api.ts",
+      "target": "function:api.ts:solTx",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api.ts",
+      "target": "function:api.ts:relaySwap",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api.ts",
+      "target": "function:api.ts:h",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:indexer.ts",
+      "target": "function:indexer.ts:parse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:indexer.ts",
+      "target": "function:indexer.ts:parse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:indexer.ts",
+      "target": "function:indexer.ts:indexUser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:indexer.ts",
+      "target": "function:indexer.ts:settleAction",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:indexer.ts",
+      "target": "function:indexer.ts:settleAction",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:indexer.ts",
+      "target": "function:indexer.ts:settle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:indexer.ts",
+      "target": "function:indexer.ts:settle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:indexer.ts",
+      "target": "function:indexer.ts:runIndexer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:indexer.ts",
+      "target": "function:indexer.ts:runIndexer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:migrate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:migrate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:isEvm",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:isEvm",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:fundAtaCreates",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:fundAtaCreates",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:capPriorityFee",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:capPriorityFee",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:erc20Transfer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:erc20Transfer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:erc20BalanceOf",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:erc20BalanceOf",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:toDecimal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:toDecimal",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:signupMessage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:signupMessage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:ownsWallet",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:ownsWallet",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:cached",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "function:shared.ts:cached",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:api.ts",
+      "target": "file:indexer.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:api.ts",
+      "target": "file:shared.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:indexer.ts",
+      "target": "file:shared.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:api.ts:tokenInfo",
+      "target": "function:shared.ts:cached",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:api.ts:tokenInfo",
+      "target": "function:shared.ts:isEvm",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:api.ts:evmTokens",
+      "target": "function:shared.ts:cached",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:api.ts:cash",
+      "target": "function:shared.ts:cached",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:api.ts:cash",
+      "target": "function:shared.ts:isEvm",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:api.ts:cash",
+      "target": "function:shared.ts:erc20BalanceOf",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:api.ts:sponsorFee",
+      "target": "function:shared.ts:fundAtaCreates",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:api.ts:solTx",
+      "target": "function:shared.ts:fundAtaCreates",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:api.ts:solTx",
+      "target": "function:shared.ts:capPriorityFee",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:api.ts:relaySwap",
+      "target": "function:shared.ts:isEvm",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:indexer.ts:parse",
+      "target": "function:shared.ts:toDecimal",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "table:schema.sql",
+      "target": "table:schema.sql:users",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "table:schema.sql",
+      "target": "table:schema.sql:follows",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "table:schema.sql",
+      "target": "table:schema.sql:trades",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "table:schema.sql",
+      "target": "table:schema.sql:cursors",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "table:schema.sql",
+      "target": "table:schema.sql:pending",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:.env.example",
+      "target": "file:api.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:.env.example",
+      "target": "file:indexer.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:.env.example",
+      "target": "file:shared.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:.env.example",
+      "target": "file:web/main.tsx",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:.env.example",
+      "target": "file:vite.config.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:package.json",
+      "target": "file:api.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:package.json",
+      "target": "file:indexer.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:package.json",
+      "target": "file:vite.config.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:tsconfig.json",
+      "target": "file:api.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:tsconfig.json",
+      "target": "file:indexer.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:tsconfig.json",
+      "target": "file:shared.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:tsconfig.json",
+      "target": "file:web/main.tsx",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:tsconfig.json",
+      "target": "file:vite.config.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "document:README.md",
+      "target": "file:api.ts",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "file:indexer.ts",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "file:shared.ts",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "file:web/main.tsx",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "table:schema.sql",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "file:start.ps1",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "config:.env.example",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "config:package.json",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "table:schema.sql:pending",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "table:schema.sql:trades",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "table:schema.sql",
+      "target": "file:shared.ts",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "table:schema.sql",
+      "target": "file:api.ts",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "table:schema.sql",
+      "target": "file:indexer.ts",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "table:schema.sql",
+      "target": "table:schema.sql:users",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:schema.sql",
+      "target": "table:schema.sql:trades",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:start.ps1",
+      "target": "file:api.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:start.ps1",
+      "target": "config:package.json",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:start.ps1",
+      "target": "config:.env.example",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "function:web/main.tsx:api",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "function:web/main.tsx:usePoll",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "function:web/main.tsx:useSend",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "function:web/main.tsx:useLinkEvm",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "function:web/main.tsx:App",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "function:web/main.tsx:Signup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "function:web/main.tsx:Deposit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "function:web/main.tsx:Markets",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "function:web/main.tsx:TokenView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "function:web/main.tsx:Chart",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "function:web/main.tsx:Ticket",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "function:web/main.tsx:Profile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "function:web/main.tsx:Withdraw",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "function:web/main.tsx:TradeList",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "function:web/main.tsx:Alerts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "file:web/styles.css",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/main.tsx",
+      "target": "file:api.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:web/index.html",
+      "target": "file:web/main.tsx",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:web/index.html",
+      "target": "file:web/styles.css",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:vite.config.ts",
+      "target": "file:web/main.tsx",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:vite.config.ts",
+      "target": "file:web/index.html",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:vite.config.ts",
+      "target": "file:api.ts",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:indexer.test.ts",
+      "target": "file:indexer.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:indexer.ts",
+      "target": "file:indexer.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:indexer.test.ts",
+      "target": "function:indexer.ts:parse",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:indexer.test.ts",
+      "target": "function:indexer.ts:settleAction",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:indexer.test.ts",
+      "target": "file:shared.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "file:indexer.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:indexer.test.ts",
+      "target": "function:shared.ts:toDecimal",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.test.ts",
+      "target": "file:shared.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:shared.ts",
+      "target": "file:shared.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:shared.test.ts",
+      "target": "function:shared.ts:ownsWallet",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.test.ts",
+      "target": "function:shared.ts:signupMessage",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.test.ts",
+      "target": "function:shared.ts:cached",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.test.ts",
+      "target": "function:shared.ts:capPriorityFee",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.test.ts",
+      "target": "function:shared.ts:erc20BalanceOf",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.test.ts",
+      "target": "function:shared.ts:erc20Transfer",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:shared.test.ts",
+      "target": "function:shared.ts:fundAtaCreates",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ],
+  "layers": [
+    {
+      "id": "layer:frontend",
+      "name": "Web Frontend",
+      "description": "Single-file React trading terminal UI in web/ (Privy login, embedded Solana/EVM wallets, markets, swap and social views) with its HTML shell and global stylesheet, served by Vite and calling the Bun API.",
+      "nodeIds": [
+        "file:web/index.html",
+        "file:web/main.tsx",
+        "file:web/styles.css"
+      ]
+    },
+    {
+      "id": "layer:api",
+      "name": "HTTP API",
+      "description": "Bun HTTP server and process entry point that verifies Privy auth, serves markets and the unified USDC balance, builds Jupiter and Relay swaps, sponsors gas, and starts the in-process indexer.",
+      "nodeIds": [
+        "file:api.ts"
+      ]
+    },
+    {
+      "id": "layer:indexer",
+      "name": "Wallet Indexer",
+      "description": "Background worker that polls user Solana addresses, turns token balance deltas into buy/sell/deposit/withdraw trade rows, and settles pending Relay orders.",
+      "nodeIds": [
+        "file:indexer.ts"
+      ]
+    },
+    {
+      "id": "layer:shared-core",
+      "name": "Shared Core",
+      "description": "Runtime primitives used by both the API and the indexer: Postgres client and schema migration, Solana RPC connection, chain list, caching, and gasless/EVM helpers.",
+      "nodeIds": [
+        "file:shared.ts"
+      ]
+    },
+    {
+      "id": "layer:data",
+      "name": "Data Schema",
+      "description": "Idempotent Postgres schema in schema.sql defining the users, follows, trades, indexer cursors and pending Relay order tables.",
+      "nodeIds": [
+        "table:schema.sql",
+        "table:schema.sql:users",
+        "table:schema.sql:follows",
+        "table:schema.sql:trades",
+        "table:schema.sql:cursors",
+        "table:schema.sql:pending"
+      ]
+    },
+    {
+      "id": "layer:test",
+      "name": "Tests",
+      "description": "Bun test suites covering indexer balance-delta trade classification and shared helpers such as wallet-ownership proof, the stale-on-error cache and gas sponsorship checks.",
+      "nodeIds": [
+        "file:indexer.test.ts",
+        "file:shared.test.ts"
+      ]
+    },
+    {
+      "id": "layer:config",
+      "name": "Configuration, Tooling & Docs",
+      "description": "Project manifest, TypeScript and Vite build settings, the root .env template, the Windows local launcher script, tool settings and the README overview.",
+      "nodeIds": [
+        "config:.env.example",
+        "config:package.json",
+        "config:tsconfig.json",
+        "config:.ua/config.json",
+        "file:vite.config.ts",
+        "file:start.ps1",
+        "document:README.md"
+      ]
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "Project Overview",
+      "description": "Start with the README, which describes the fomo terminal: trade Solana and Base tokens gaslessly from one USDC balance. It gives a per-file map of the codebase and the central data flow that the rest of this tour follows: the API builds a transaction, the browser signs and sends it with a Privy embedded wallet, the indexer picks it up, and portfolio and alerts read from Postgres. Keep that loop in mind, because every later step is one piece of it.",
+      "nodeIds": [
+        "document:README.md"
+      ]
+    },
+    {
+      "order": 2,
+      "title": "Manifest and Environment",
+      "description": "Before reading code, see how the pieces are run and configured. package.json defines the scripts for the local PGlite database, the API, the indexer, Vite and the tests, and lists the Solana, viem, Privy, jose and React dependencies. The .env.example template shows the single root .env shared by the API, indexer and Vite: Postgres and Solana RPC settings, the Privy app id, Jupiter and Relay keys, the platform fee, and the gasless sponsorship switches (SPONSOR_KEY, EVM_GASLESS) you will meet again in Step 6.",
+      "nodeIds": [
+        "config:package.json",
+        "config:.env.example",
+        "config:tsconfig.json"
+      ]
+    },
+    {
+      "order": 3,
+      "title": "The Postgres Schema",
+      "description": "The whole system revolves around five tables, so learn them first. users is keyed by Privy DID with a unique username, a Solana wallet and a later-added EVM wallet; follows is the social graph with a check preventing self-follows; trades is the indexer-written ledger of buy/sell/deposit/withdraw rows with signed token and USDC deltas. The schema is idempotent and grows through additive multichain columns (evm_wallet, chain, via) rather than separate migration files.",
+      "nodeIds": [
+        "table:schema.sql",
+        "table:schema.sql:users",
+        "table:schema.sql:follows",
+        "table:schema.sql:trades"
+      ],
+      "languageLesson": "Idempotent SQL uses forms like CREATE TABLE IF NOT EXISTS and ALTER TABLE ... ADD COLUMN IF NOT EXISTS so the same file can be applied on every startup. A composite primary key plus a CHECK constraint (as in follows) enforces data rules in the database instead of in application code."
+    },
+    {
+      "order": 4,
+      "title": "Indexer Bookkeeping Tables",
+      "description": "Two smaller tables exist purely to support the background indexer. cursors stores the last processed signature for each watched wallet or token-account address so polling can resume where it left off. pending holds Relay orders (cross-chain and EVM) with their quoted amounts until the indexer either converts each one into a trades row or drops it, which is the 'pending until filled' behaviour described in the README.",
+      "nodeIds": [
+        "table:schema.sql:cursors",
+        "table:schema.sql:pending"
+      ]
+    },
+    {
+      "order": 5,
+      "title": "Shared Core Primitives",
+      "description": "shared.ts is the foundation that both the API and the indexer depend on, which is why it sits among the most depended-upon files in the graph. It owns the Postgres client and the migrate routine that applies schema.sql from Step 3 one statement at a time, the Solana RPC connection, the supported chain registry, and small utilities such as exact decimal formatting, ERC-20 calldata encoders, signup wallet-signature verification and a TTL cache that de-duplicates concurrent requests and serves the last good value on failure. It also holds the gasless transaction rewriting helpers that Step 7 builds on.",
+      "nodeIds": [
+        "file:shared.ts"
+      ],
+      "languageLesson": "Amounts are kept as bigint base units and converted to exact decimal strings rather than JavaScript numbers, because floating-point arithmetic cannot represent token amounts precisely."
+    },
+    {
+      "order": 6,
+      "title": "The Bun API Server",
+      "description": "api.ts is the server and process entry point: on startup it runs the migrations from Step 5 and starts the indexer in-process, then serves the /api routes plus the built frontend. Every authenticated route verifies a Privy JWT, and the routes cover signup, token lists and candles, swaps, withdrawals, profiles, follows and alerts. Notice the unified cash balance, which adds raw USDC across every supported chain into the single number the README promises, and the cached, rate-limited calls to upstream price sources that degrade gracefully when a source is down.",
+      "nodeIds": [
+        "file:api.ts"
+      ]
+    },
+    {
+      "order": 7,
+      "title": "Swap Routing and Gasless",
+      "description": "This is the heart of the product, still inside api.ts with helpers from shared.ts. Solana-to-Solana trades are routed through Jupiter, while EVM and cross-chain trades are quoted through Relay, which records a pending row (Step 4) and returns either EVM transactions or a Solana transaction for the browser to sign. For gasless Solana trades the API rate-limits the user, redirects token-account rent to the sponsor wallet, caps the priority fee so a quote cannot make the sponsor overpay, appends a USDC repayment transfer and pre-signs as fee payer.",
+      "nodeIds": [
+        "function:api.ts:solTx",
+        "function:api.ts:relaySwap",
+        "function:api.ts:sponsorFee",
+        "function:shared.ts:fundAtaCreates",
+        "function:shared.ts:capPriorityFee"
+      ]
+    },
+    {
+      "order": 8,
+      "title": "The Wallet Indexer",
+      "description": "Once the browser has sent a transaction, indexer.ts is what turns on-chain activity into rows in the trades table. It polls every user's Solana addresses back to the stored cursor and diffs pre/post token balances: USDC and a token moving in opposite directions is a buy or sell, anything else is a deposit or withdrawal. It also settles pending Relay orders, where only success and refund are final and other orders expire after an hour. It runs inside the API process or standalone as its own entry point.",
+      "nodeIds": [
+        "file:indexer.ts"
+      ]
+    },
+    {
+      "order": 9,
+      "title": "Frontend Shell and Build",
+      "description": "Now switch to the browser side. vite.config.ts serves the React app from the web directory, reads the same root .env from Step 2 and proxies /api requests to the local Bun API. index.html provides the #root mount point and boots main.tsx as an ES module, and styles.css defines the light/dark color tokens and the layout for the landing page, markets list, chart and ticket, profile and trade feed.",
+      "nodeIds": [
+        "file:vite.config.ts",
+        "file:web/index.html",
+        "file:web/styles.css"
+      ]
+    },
+    {
+      "order": 10,
+      "title": "The React Terminal",
+      "description": "web/main.tsx is the entire frontend in one file and the node with the widest scope in the graph. It handles Privy login and embedded Solana and EVM wallets, hash routing, and three main views: markets with a candle chart and buy/sell ticket, profiles with holdings, follows and withdrawals, and an alerts feed of trades from followed traders. A few small pieces carry most of the wiring: a fetch wrapper that attaches the Privy bearer token, a polling hook, and a send hook that signs and sends the API-built payload from Step 7 as either sequential EVM transactions or one Solana transaction.",
+      "nodeIds": [
+        "file:web/main.tsx"
+      ],
+      "languageLesson": "Custom React hooks (functions named use...) package stateful logic such as polling or wallet signing so several components can reuse it without sharing a parent component."
+    },
+    {
+      "order": 11,
+      "title": "Tests as Specification",
+      "description": "The Bun test files double as executable documentation of the riskiest logic you have just read. indexer.test.ts pins down how balance deltas are classified into buy, sell, deposit and withdraw rows (ignoring other owners and failed transactions) and when a Relay order trades or drops. shared.test.ts covers the signup wallet-ownership proof, the stale-on-error cache, sponsor-funded token-account creation, priority fee capping and ERC-20 calldata encoding.",
+      "nodeIds": [
+        "file:indexer.test.ts",
+        "file:shared.test.ts"
+      ]
+    },
+    {
+      "order": 12,
+      "title": "Local Launcher Script",
+      "description": "Finish with start.ps1, the Windows PowerShell launcher that ties the runtime together. It stops any running PGlite server and API, restarts the local database and then the API with a pinned Bun version, waits for ports 5434 and 3000 to open, and opens the app in the browser. Because the API starts the indexer in-process (Step 6), this one script brings up the whole loop described in Step 1.",
+      "nodeIds": [
+        "file:start.ps1"
+      ]
+    }
+  ]
+}
