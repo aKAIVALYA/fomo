@@ -29,3 +29,12 @@ test("USDC deposit, token withdraw, other owners ignored, failed tx ignored", ()
   expect(parse(tx([bal(BONK, "100000", 5)], [bal(BONK, "40000", 5)]), W)).toEqual([{ mint: BONK, kind: "withdraw", amount: "-0.6", usdc: "0" }]);
   expect(parse(tx([bal(USDC, "0", 6)], [bal(USDC, "9", 6)], { err: 1 }), W)).toEqual([]);
 });
+
+const { settleAction } = await import("./indexer");
+test("settleAction: only success trades, only refund or old age drops", () => {
+  expect(settleAction("success", 0)).toBe("trade");
+  expect(settleAction("refund", 0)).toBe("drop");
+  for (const st of ["waiting", "pending", "submitted", "failure"]) expect(settleAction(st, 60_000)).toBe("wait");
+  expect(settleAction("waiting", 3_700_000)).toBe("drop");
+  expect(settleAction("success", 3_700_000)).toBe("trade");
+});

@@ -22,7 +22,8 @@
     "buffer": "6",
     "jose": "^6.2.12",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "viem": "^2.56.5"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.9",

@@ -1,7 +1,11 @@
-import { StrictMode, useEffect, useState } from "react";
+import { StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { PrivyProvider, usePrivy } from "@privy-io/react-auth";
+import {
+  PrivyProvider, usePrivy, useCreateWallet as useCreateEvmWallet, useSendTransaction, useSignMessage as useEvmSignMessage,
+} from "@privy-io/react-auth";
 import { useCreateWallet, useSignAndSendTransaction, useSignMessage, useWallets } from "@privy-io/react-auth/solana";
+import { createPublicClient, http } from "viem";
+import { base } from "viem/chains";
 import { createSolanaRpc, createSolanaRpcSubscriptions, getBase58Decoder } from "@solana/kit";
 import { Buffer } from "buffer";
 import "./styles.css";
@@ -11,6 +15,13 @@ import "./styles.css";
 
 const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const RPC = import.meta.env.VITE_SOLANA_RPC_URL as string;
+// Mirrors CHAINS in shared.ts. `usdc` = that chain's USDC, the cash side of every trade.
+const CHAINS: Record<string, { name: string; id: number; usdc: string; explorer: string }> = {
+  solana: { name: "Solana", id: 792703809, usdc: USDC, explorer: "https://solscan.io/tx/" },
+  base: { name: "Base", id: 8453, usdc: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", explorer: "https://basescan.org/tx/" },
+};
+// ponytail: Base only; make this a per-chain map when a second EVM chain is added
+const evmClient = createPublicClient({ chain: base, transport: http(import.meta.env.VITE_BASE_RPC_URL as string | undefined) });
 
 // ---------- utils ----------
 let getToken: () => Promise<string | null> = async () => null;
@@ -70,22 +81,60 @@ function usePoll<T>(path: string | null, ms = 0): [T | undefined, () => void, st
   return [data, () => setN((x) => x + 1), err];
 }
 
-type Me = { id: string; username: string; wallet: string };
+type Me = { id: string; username: string; wallet: string; evm_wallet: string | null };
+type Config = { gasless: boolean; evmGasless: boolean };
+type Cash = { cash: number | null; cashBy: Record<string, string> };
+// what the API hands back to sign: one Solana tx (already signed by our gas sponsor when gasless), or EVM txs to send in order
+type Signable = { tx?: string; evm?: { to: `0x${string}`; data: `0x${string}`; value: string; chainId: number }[] };
 
-// sign + send a base64 tx from the API with the user's Privy wallet
+let config: Promise<Config> | undefined;
+const getConfig = () => (config ??= api<Config>("/config"));
+
+// sign + send what the API built with the user's Privy wallet; returns an explorer link
 function useSend(me?: Me | null) {
   const { wallets } = useWallets();
   const { signAndSendTransaction } = useSignAndSendTransaction();
-  return async (b64: string) => {
+  const { sendTransaction } = useSendTransaction();
+  return async (r: Signable) => {
+    if (r.evm) {
+      const sponsor = (await getConfig()).evmGasless; // Privy pays the gas when the app has fee sponsorship on
+      let hash = "";
+      for (const t of r.evm) {
+        // an approve has to land before the swap after it can be simulated
+        if (hash) await evmClient.waitForTransactionReceipt({ hash: hash as `0x${string}` });
+        ({ hash } = await sendTransaction({ to: t.to, data: t.data, value: BigInt(t.value), chainId: t.chainId }, { sponsor, address: me?.evm_wallet ?? undefined }));
+      }
+      return Object.values(CHAINS).find((c) => c.id === r.evm![0].chainId)!.explorer + hash;
+    }
     const wallet = wallets.find((w) => w.address === me?.wallet);
     if (!wallet) throw new Error("Wallet isn't ready yet. Try again in a moment.");
     const { signature } = await signAndSendTransaction({
-      transaction: Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)),
+      transaction: Uint8Array.from(atob(r.tx!), (c) => c.charCodeAt(0)),
       wallet,
       chain: "solana:mainnet",
     });
-    return getBase58Decoder().decode(signature);
+    return CHAINS.solana.explorer + getBase58Decoder().decode(signature);
   };
+}
+
+// Existing and new users alike: once logged in, prove the embedded EVM wallet is ours and attach it to the account.
+// Silent (no wallet popup): it's a one-off sign-in message, same text as the Solana signup proof.
+function useLinkEvm(me: Me | null | undefined, onDone: () => void) {
+  const { user } = usePrivy();
+  const { signMessage } = useEvmSignMessage();
+  const { createWallet } = useCreateEvmWallet();
+  const tried = useRef(false);
+  const evm = user?.linkedAccounts.find((a) => a.type === "wallet" && a.walletClientType === "privy" && a.chainType === "ethereum") as { address: string } | undefined;
+  useEffect(() => {
+    if (!me || me.evm_wallet || tried.current) return;
+    tried.current = true; // once per page load; a reload retries
+    (async () => {
+      const address = evm?.address ?? (await createWallet()).address;
+      const { signature } = await signMessage({ message: `Sign in to fomo as ${me.id}` }, { address, uiOptions: { showWalletUIs: false } });
+      await api("/me/evm", { method: "POST", body: JSON.stringify({ wallet: address, signature }) });
+      onDone();
+    })().catch((e) => console.warn("EVM wallet link failed:", e));
+  }, [me?.id, me?.evm_wallet]);
 }
 
 // ---------- app ----------
@@ -94,13 +143,15 @@ function App() {
   getToken = authenticated ? getAccessToken : async () => null;
   const route = useHash();
   const [me, reloadMe, meErr] = usePoll<Me | null>(ready && authenticated ? "/me" : null);
+  const [bal] = usePoll<Cash>(me ? "/balance" : null, 15_000);
+  useLinkEvm(me, reloadMe);
 
   if (!ready) return <p className="center muted">Loading…</p>;
   if (!authenticated)
     return (
       <main className="landing">
         <h1>fomo</h1>
-        <p>Trade Solana tokens with USDC and see what the people you follow are buying.</p>
+        <p>Trade Solana and Base tokens from one USDC balance, with no gas to think about. See what the people you follow are buying.</p>
         <button className="primary" onClick={login}>Sign in</button>
       </main>
     );
@@ -127,7 +178,8 @@ function App() {
           <a href={`#/u/${me.username}`} aria-current={page === "u" && arg === me.username}>Portfolio</a>
           <a href="#/alerts" aria-current={page === "alerts"}>Alerts</a>
         </nav>
-        <Deposit wallet={me.wallet} />
+        {bal?.cash != null && <span className="cash" title={Object.entries(bal.cashBy).map(([c, v]) => `${CHAINS[c]?.name ?? c}: ${usd(v)}`).join(" · ")}>{usd(bal.cash)} <span className="muted">cash</span></span>}
+        <Deposit me={me} />
         <button className="quiet" onClick={logout}>Sign out @{me.username}</button>
       </header>
       {page === "u" ? <Profile key={arg} username={arg} me={me} />
@@ -185,29 +237,41 @@ function Signup({ onDone }: { onDone: () => void }) {
   );
 }
 
-function Deposit({ wallet }: { wallet: string }) {
-  const [copied, setCopied] = useState(false);
+// USDC sent to either address lands in the same cash balance
+function Deposit({ me }: { me: Me }) {
+  const [copied, setCopied] = useState("");
+  const addrs = [["solana", me.wallet], ["base", me.evm_wallet]].filter(([, a]) => a) as [string, string][];
   return (
-    <button className="deposit" title="Send USDC (Solana) to this address" onClick={() => {
-      navigator.clipboard.writeText(wallet);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    }}>
-      {copied ? "Address copied" : <>Deposit USDC to <b>{short(wallet)}</b></>}
-    </button>
+    <details className="deposit">
+      <summary>Deposit USDC</summary>
+      <ul>
+        {addrs.map(([chain, a]) => (
+          <li key={chain}>
+            <button title={`Send USDC on ${CHAINS[chain].name} to this address`} onClick={() => {
+              navigator.clipboard.writeText(a);
+              setCopied(chain);
+              setTimeout(() => setCopied(""), 1500);
+            }}>
+              <span className="muted">{CHAINS[chain].name}</span> <b>{copied === chain ? "Copied" : short(a)}</b>
+            </button>
+          </li>
+        ))}
+        <li className="hint">Send USDC on either network. It all counts as one balance.</li>
+      </ul>
+    </details>
   );
 }
 
 // ---------- markets ----------
 type Token = {
-  id: string; symbol: string; name: string; icon?: string; decimals: number; usdPrice?: number; stats24h?: { priceChange?: number };
+  id: string; chain: string; symbol: string; name: string; icon?: string; decimals: number; usdPrice?: number; stats24h?: { priceChange?: number };
   liquidity?: number; verified?: boolean; freezable?: boolean; mintable?: boolean;
 };
 
 // Plain-language risk notes shown before trading a token
 function risks(t: Token): string[] {
   const r: string[] = [];
-  if (!t.verified) r.push("Not verified by Jupiter. Anyone can create a token with any name.");
+  if (!t.verified) r.push(`Not ${t.chain === "solana" ? "verified by Jupiter" : "listed on CoinGecko"}. Anyone can create a token with any name.`);
   if (t.freezable) r.push("The issuer can freeze this token in your wallet, so you might not be able to sell.");
   if (t.mintable) r.push("The issuer can mint more of this token, which can dilute its price.");
   if ((t.liquidity ?? 0) < 50_000) r.push("Low liquidity. Larger trades may fail or move the price a lot.");
@@ -215,18 +279,24 @@ function risks(t: Token): string[] {
 }
 
 function Markets({ me }: { me: Me }) {
+  const [chain, setChain] = useState("solana");
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
   useEffect(() => { const t = setTimeout(() => setQuery(q.trim()), 300); return () => clearTimeout(t); }, [q]);
-  const [tokens, , err] = usePoll<Token[]>(query ? `/tokens?q=${encodeURIComponent(query)}` : "/tokens", query ? 0 : 30_000);
-  const list = (tokens ?? []).filter((t) => t.id !== USDC);
+  const [tokens, , err] = usePoll<Token[]>(`/tokens?chain=${chain}${query ? `&q=${encodeURIComponent(query)}` : ""}`, query ? 0 : 30_000);
+  const list = (tokens ?? []).filter((t) => t.chain === chain && t.id !== CHAINS[chain].usdc); // chain check drops the old list while the new one loads
   const [sel, setSel] = useState<string>();
   const token = list.find((t) => t.id === sel) ?? list[0];
 
   return (
     <main className="markets">
       <aside className="tokens">
-        <input type="search" placeholder="Search token or paste mint" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search tokens" />
+        <div className="tf chains" role="group" aria-label="Network">
+          {Object.entries(CHAINS).map(([c, { name }]) => (
+            <button key={c} aria-pressed={chain === c} onClick={() => { setChain(c); setSel(undefined); }}>{name}</button>
+          ))}
+        </div>
+        <input type="search" placeholder="Search token or paste address" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search tokens" />
         {err && <p className="error">{err}</p>}
         <ul>
           {list.map((t) => {
@@ -235,7 +305,7 @@ function Markets({ me }: { me: Me }) {
               <li key={t.id}>
                 <button aria-pressed={t.id === token?.id} onClick={() => setSel(t.id)}>
                   {t.icon ? <img src={t.icon} alt="" onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} /> : <span className="dot" />}
-                  <span className="sym">{t.symbol}{!t.verified && <span className="unverified" title="Not verified by Jupiter"> ⚠</span>}</span>
+                  <span className="sym">{t.symbol}{!t.verified && <span className="unverified" title="Unverified token"> ⚠</span>}</span>
                   <span className="px">{t.usdPrice != null ? usd(t.usdPrice) : "—"}</span>
                   <span className={ch >= 0 ? "up" : "down"}>{ch >= 0 ? "+" : ""}{ch.toFixed(1)}%</span>
                 </button>
@@ -245,14 +315,14 @@ function Markets({ me }: { me: Me }) {
           {tokens && !list.length && <li className="muted pad">No tokens match “{query}”.</li>}
         </ul>
       </aside>
-      {token ? <TokenView key={token.id} token={token} me={me} /> : <section className="muted pad">Loading markets…</section>}
+      {token ? <TokenView key={token.chain + token.id} token={token} me={me} /> : <section className="muted pad">Loading markets…</section>}
     </main>
   );
 }
 
 function TokenView({ token, me }: { token: Token; me: Me }) {
   const [tf, setTf] = useState<"minute" | "hour" | "day">("hour");
-  const [candles, , err] = usePoll<number[][]>(`/candles/${token.id}?tf=${tf}`, 60_000);
+  const [candles, , err] = usePoll<number[][]>(`/candles/${token.id}?chain=${token.chain}&tf=${tf}`, 60_000);
   const ch = token.stats24h?.priceChange ?? 0;
   return (
     <section className="token">
@@ -295,6 +365,9 @@ function Ticket({ token, me }: { token: Token; me: Me }) {
   const [amt, setAmt] = useState("");
   const [msg, setMsg] = useState<{ ok?: string; err?: string }>({});
   const [busy, setBusy] = useState(false);
+  const [cfg] = usePoll<Config>("/config");
+  const [bal, reloadBal] = usePoll<Cash>("/balance", 15_000);
+  const gasless = cfg && (token.chain === "solana" ? cfg.gasless : cfg.gasless && cfg.evmGasless);
   const unit = side === "buy" ? "USDC" : token.symbol;
   const warn = risks(token);
   const est = Number(amt) && token.usdPrice ? (side === "buy" ? `≈ ${num(Number(amt) / token.usdPrice)} ${token.symbol}` : `≈ ${usd(Number(amt) * token.usdPrice)}`) : "";
@@ -305,9 +378,8 @@ function Ticket({ token, me }: { token: Token; me: Me }) {
     if (!raw) return setMsg({ err: "Enter an amount above zero." });
     setBusy(true); setMsg({});
     try {
-      const { tx } = await api("/swap", { method: "POST", body: JSON.stringify({ side, mint: token.id, amount: raw }) });
-      const sig = await send(tx);
-      setMsg({ ok: sig }); setAmt("");
+      const link = await send(await api<Signable>("/swap", { method: "POST", body: JSON.stringify({ chain: token.chain, side, mint: token.id, amount: raw }) }));
+      setMsg({ ok: link }); setAmt(""); reloadBal();
     } catch (e: any) { setMsg({ err: e.message }); }
     setBusy(false);
   };
@@ -322,23 +394,25 @@ function Ticket({ token, me }: { token: Token; me: Me }) {
         <input inputMode="decimal" placeholder="0.00" value={amt} onChange={(e) => setAmt(e.target.value)} aria-label={`Amount in ${unit}`} />
         <span>{unit}</span>
       </label>
-      <p className="hint">{est || " "}</p>
+      <p className="hint">{est || (side === "buy" && bal?.cash != null ? `${usd(bal.cash)} available across ${Object.values(CHAINS).map((c) => c.name).join(" + ")}` : " ")}</p>
       {side === "buy" && warn.length > 0 && <ul className="risks">{warn.map((w) => <li key={w}>{w}</li>)}</ul>}
       <button className="primary" disabled={busy}>
         {busy ? "Confirm in wallet…" : `${side === "buy" ? "Buy" : "Sell"} ${token.symbol}${side === "buy" && !token.verified ? " anyway" : ""}`}
       </button>
-      <p className="hint">Includes a 0.1% platform fee. Your wallet needs a little SOL for network fees.</p>
-      {msg.ok && <p className="ok" role="status">{side === "buy" ? "Bought" : "Sold"}. <a href={`https://solscan.io/tx/${msg.ok}`} target="_blank" rel="noreferrer">View transaction</a></p>}
+      <p className="hint">
+        Includes a 0.1% platform fee. {gasless ? "No gas needed: network fees are on us." : `Your wallet needs a little ${token.chain === "solana" ? "SOL" : "ETH"} for network fees.`}
+      </p>
+      {msg.ok && <p className="ok" role="status">Order sent. It shows in your portfolio within seconds. <a href={msg.ok} target="_blank" rel="noreferrer">View transaction</a></p>}
       {msg.err && <p className="error" role="alert">{msg.err}</p>}
     </form>
   );
 }
 
 // ---------- profile / portfolio ----------
-type Trade = { sig: string; mint: string; kind: string; amount: string; usdc: string; ts: string; symbol?: string; username?: string };
+type Trade = { sig: string; chain: string; mint: string; kind: string; amount: string; usdc: string; ts: string; symbol?: string; username?: string };
 type ProfileData = {
-  user: Omit<Me, "id">; cash: number; followers: string[]; following: string[]; trades: Trade[];
-  holdings: { mint: string; symbol?: string; icon?: string; decimals?: number; amount: string; value: number; pnl: number }[];
+  user: Omit<Me, "id">; cash: number | null; cashBy: Record<string, string>; followers: string[]; following: string[]; trades: Trade[];
+  holdings: { chain: string; mint: string; symbol?: string; icon?: string; decimals?: number; amount: string; value: number; pnl: number }[];
 };
 
 function Profile({ username, me }: { username: string; me: Me }) {
@@ -348,7 +422,7 @@ function Profile({ username, me }: { username: string; me: Me }) {
   if (!p) return <main className="pad muted">Loading…</main>;
   const mine = p.user.username === me.username;
   const following = p.followers.includes(me.username);
-  const total = p.cash + p.holdings.reduce((s, h) => s + h.value, 0);
+  const total = (p.cash ?? 0) + p.holdings.reduce((s, h) => s + h.value, 0);
 
   const toggle = async () => {
     setBusy(true);
@@ -364,7 +438,9 @@ function Profile({ username, me }: { username: string; me: Me }) {
         <div className="stats">
           <People label="followers" names={p.followers} />
           <People label="following" names={p.following} />
-          <span>{usd(p.cash)} in USDC</span>
+          <span title={Object.entries(p.cashBy).map(([c, v]) => `${CHAINS[c]?.name ?? c}: ${usd(v)}`).join(" · ")}>
+            {p.cash == null ? "USDC balance unavailable right now" : `${usd(p.cash)} in USDC`}
+          </span>
         </div>
         {!mine && <button className={following ? "quiet" : "primary"} onClick={toggle} disabled={busy}>{following ? "Unfollow" : "Follow"}</button>}
       </div>
@@ -375,14 +451,14 @@ function Profile({ username, me }: { username: string; me: Me }) {
           <thead><tr><th>Token</th><th>Amount</th><th>Value</th><th>P&amp;L</th></tr></thead>
           <tbody>
             {p.holdings.filter((h) => Number(h.amount) > 0).map((h) => (
-              <tr key={h.mint}>
-                <td>{h.symbol ?? short(h.mint)}</td><td>{num(h.amount)}</td><td>{usd(h.value)}</td>
+              <tr key={h.chain + h.mint}>
+                <td>{h.symbol ?? short(h.mint)}{h.chain !== "solana" && <span className="muted"> · {CHAINS[h.chain]?.name ?? h.chain}</span>}</td><td>{num(h.amount)}</td><td>{usd(h.value)}</td>
                 <td className={h.pnl >= 0 ? "up" : "down"}>{h.pnl >= 0 ? "+" : ""}{usd(h.pnl)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-      ) : <p className="muted">{mine ? "No tokens yet. Deposit USDC, then buy from Markets." : "No open positions."}</p>}
+      ) : <p className="muted">{mine ? "No tokens yet. Deposit USDC on Solana or Base, then buy from Markets." : "No open positions."}</p>}
 
       {mine && <Withdraw me={me} p={p} onDone={reload} />}
 
@@ -403,7 +479,12 @@ function People({ label, names }: { label: string; names: string[] }) {
 
 function Withdraw({ me, p, onDone }: { me: Me; p: ProfileData; onDone: () => void }) {
   const send = useSend(me);
-  const opts = [{ mint: USDC, symbol: "USDC", decimals: 6, amount: String(p.cash) }, ...p.holdings.filter((h) => Number(h.amount) > 0)];
+  // USDC from any chain that holds some; tokens from Solana only (on Base, sell to USDC first)
+  const opts = [
+    ...Object.entries(CHAINS).filter(([c]) => c === "solana" || Number(p.cashBy[c]) > 0)
+      .map(([c, { usdc, name }]) => ({ chain: c, mint: usdc, symbol: `USDC on ${name}`, decimals: 6 as number | undefined, amount: p.cashBy[c] ?? "0" })),
+    ...p.holdings.filter((h) => h.chain === "solana" && Number(h.amount) > 0),
+  ];
   const [mint, setMint] = useState(USDC);
   const [amt, setAmt] = useState("");
   const [to, setTo] = useState("");
@@ -418,8 +499,8 @@ function Withdraw({ me, p, onDone }: { me: Me; p: ProfileData; onDone: () => voi
     if (!raw) return setMsg({ err: "Enter an amount above zero." });
     setBusy(true); setMsg({});
     try {
-      const { tx } = await api("/withdraw", { method: "POST", body: JSON.stringify({ mint, amount: raw, to: to.trim() }) });
-      setMsg({ ok: await send(tx) }); setAmt(""); onDone();
+      const r = await api<Signable>("/withdraw", { method: "POST", body: JSON.stringify({ chain: o.chain, mint, amount: raw, to: to.trim() }) });
+      setMsg({ ok: await send(r) }); setAmt(""); onDone();
     } catch (e: any) { setMsg({ err: e.message }); }
     setBusy(false);
   };
@@ -435,9 +516,9 @@ function Withdraw({ me, p, onDone }: { me: Me; p: ProfileData; onDone: () => voi
         </label>
         <label className="field"><span>Amount</span><input inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="0.00" />
           <button type="button" className="quiet" onClick={() => setAmt(o.amount)}>Max</button></label>
-        <label className="field"><span>To</span><input value={to} onChange={(e) => setTo(e.target.value)} placeholder="Solana address" required /></label>
+        <label className="field"><span>To</span><input value={to} onChange={(e) => setTo(e.target.value)} placeholder={`${CHAINS[o.chain].name} address`} required /></label>
         <button className="primary" disabled={busy}>{busy ? "Confirm in wallet…" : "Withdraw"}</button>
-        {msg.ok && <p className="ok" role="status">Withdrawn. <a href={`https://solscan.io/tx/${msg.ok}`} target="_blank" rel="noreferrer">View transaction</a></p>}
+        {msg.ok && <p className="ok" role="status">Withdrawn. <a href={msg.ok} target="_blank" rel="noreferrer">View transaction</a></p>}
         {msg.err && <p className="error" role="alert">{msg.err}</p>}
       </form>
     </details>
@@ -456,7 +537,7 @@ function TradeList({ trades, empty }: { trades: Trade[]; empty: string }) {
             {verb[t.kind]} {num(Math.abs(Number(t.amount)))} {t.symbol ?? short(t.mint)}
             {Number(t.usdc) !== 0 && <> for {usd(Math.abs(Number(t.usdc)))}</>}
           </span>
-          <a className="muted" href={`https://solscan.io/tx/${t.sig}`} target="_blank" rel="noreferrer">{ago(t.ts)}</a>
+          <a className="muted" href={(CHAINS[t.chain] ?? CHAINS.solana).explorer + t.sig} target="_blank" rel="noreferrer">{ago(t.ts)}</a>
         </li>
       ))}
     </ul>
@@ -481,7 +562,9 @@ createRoot(document.getElementById("root")!).render(
       appId={import.meta.env.VITE_PRIVY_APP_ID as string}
       config={{
         appearance: { walletChainType: "solana-only" },
-        embeddedWallets: { solana: { createOnLogin: "all-users" } },
+        embeddedWallets: { solana: { createOnLogin: "all-users" }, ethereum: { createOnLogin: "all-users" } },
+        supportedChains: [base],
+        defaultChain: base,
         solana: {
           rpcs: {
             "solana:mainnet": {

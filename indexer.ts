@@ -68,6 +68,32 @@ async function indexUser(u: { id: string; wallet: string }) {
   }
 }
 
+// What to do with a pending Relay order. Only `success` and `refund` are final; `failure` can still be retried or refunded.
+// After an hour a non-final order is dropped: almost always a quote the user never signed.
+export const settleAction = (status: string, ageMs: number): "trade" | "drop" | "wait" =>
+  status === "success" ? "trade" : status === "refund" || ageMs > 3_600_000 ? "drop" : "wait";
+
+// Relay orders (EVM + cross-chain) can't be read off Solana balance deltas, so api.ts records them as `pending`
+// and this turns each one into a trade once Relay says it filled.
+export async function settle() {
+  const headers: Record<string, string> = process.env.RELAY_API_KEY ? { "x-api-key": process.env.RELAY_API_KEY } : {};
+  for (const p of await sql`select * from pending`) {
+    const s: any = await fetch(`https://api.relay.link/intents/status/v3?requestId=${p.request_id}`, { headers, signal: AbortSignal.timeout(10_000) }).then((r) => r.json());
+    const action = settleAction(s.status, Date.now() - new Date(p.created_at).getTime());
+    if (action === "wait") continue;
+    if (action === "trade") {
+      // sig = the tx on the token's chain (the fill for buys, the user's own tx for sells); via = the other side
+      const [sig, via] = p.kind === "buy" ? [s.txHashes?.[0], s.inTxHashes?.[0]] : [s.inTxHashes?.[0], s.txHashes?.[0]];
+      if (!sig) continue; // hashes are appended shortly after success
+      // A fill that lands on Solana is also seen by indexUser as a plain deposit; whichever writes first, it ends up a buy.
+      await sql`insert into trades (sig, mint, user_id, kind, amount, usdc, ts, chain, via)
+                values (${sig}, ${p.mint}, ${p.user_id}, ${p.kind}, ${p.amount}, ${p.usdc}, ${new Date()}, ${p.chain}, ${via && via !== sig ? via : null})
+                on conflict (sig, mint, user_id) do update set kind = excluded.kind, usdc = excluded.usdc, via = excluded.via`;
+    }
+    await sql`delete from pending where request_id = ${p.request_id}`;
+  }
+}
+
 // ponytail: polls every user's addresses sequentially; switch to Helius webhooks / Geyser when users × RPC calls hurts
 export async function runIndexer() {
   console.log("indexer running");
@@ -77,6 +103,7 @@ export async function runIndexer() {
         await indexUser(u as any).catch((e) => console.error(u.wallet, e.message));
       }
     } catch (e: any) { console.error("db:", e.message); }
+    await settle().catch((e) => console.error("settle:", e.message));
     await Bun.sleep(5000);
   }
 }

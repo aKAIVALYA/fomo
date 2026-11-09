@@ -1,5 +1,6 @@
 import { SQL } from "bun";
-import { Connection, PublicKey } from "@solana/web3.js";
+import { ComputeBudgetProgram, Connection, PublicKey, type TransactionInstruction } from "@solana/web3.js";
+import { ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 // ponytail: prepared statements off so the local PGlite dev DB (one shared session) works; turn back on for prod Postgres if query latency matters
 // DB_POOL_MAX=1 for the local PGlite DB: it has one session, so parallel connections cross wires
@@ -22,6 +23,42 @@ export async function migrate() {
 
 export const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 export const rpc = new Connection(process.env.SOLANA_RPC_URL!, "confirmed");
+
+// Every chain we trade on. USDC on any of them counts as one cash balance.
+// To add an EVM chain: one row here + one in web/main.tsx CHAINS (id = Relay chain id, gecko = GeckoTerminal network).
+export const CHAINS: Record<string, { id: number; usdc: string; gecko: string; rpc?: string }> = {
+  solana: { id: 792703809, usdc: USDC, gecko: "solana" },
+  base: { id: 8453, usdc: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", gecko: "base", rpc: process.env.BASE_RPC_URL ?? "https://mainnet.base.org" },
+};
+export const isEvm = (chain: string) => chain !== "solana";
+
+// ---------- gasless (Solana) ----------
+// Jupiter makes the trader pay rent for new token accounts. Point those at our sponsor wallet instead,
+// so a wallet with zero SOL can trade. Returns the accounts being created (caller checks which are new).
+export function fundAtaCreates(ixs: TransactionInstruction[], sponsor: PublicKey): PublicKey[] {
+  const made: PublicKey[] = [];
+  for (const ix of ixs) {
+    // data: [] or [0] = Create, [1] = CreateIdempotent; [2] = RecoverNested has a different account layout
+    if (!ix.programId.equals(ASSOCIATED_TOKEN_PROGRAM_ID) || (ix.data[0] ?? 0) > 1) continue;
+    ix.keys[0] = { pubkey: sponsor, isSigner: true, isWritable: true };
+    made.push(ix.keys[1].pubkey);
+  }
+  return made;
+}
+
+// The sponsor pays the priority fee, so a quote can't be allowed to set an unbounded one.
+export function capPriorityFee(ixs: TransactionInstruction[], maxMicroLamports: bigint): TransactionInstruction[] {
+  return ixs.map((ix) =>
+    ix.programId.equals(ComputeBudgetProgram.programId) && ix.data[0] === 3 && ix.data.readBigUInt64LE(1) > maxMicroLamports
+      ? ComputeBudgetProgram.setComputeUnitPrice({ microLamports: maxMicroLamports })
+      : ix);
+}
+
+// ---------- EVM ----------
+const word = (hex: string) => hex.replace(/^0x/, "").toLowerCase().padStart(64, "0");
+// calldata for ERC-20 transfer(to, amount) / balanceOf(owner)
+export const erc20Transfer = (to: string, raw: bigint) => "0xa9059cbb" + word(to) + word(raw.toString(16));
+export const erc20BalanceOf = (owner: string) => "0x70a08231" + word(owner);
 
 // raw base units -> exact decimal string (no float rounding on money)
 export function toDecimal(raw: bigint, decimals: number): string {
